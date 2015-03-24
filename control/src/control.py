@@ -142,7 +142,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # prepare calibration tab
         self.combo_stepper_uid.currentIndexChanged.connect(self.stepper_uid_changed)
         self.check_limit_switches.stateChanged.connect(lambda: self.update_ui_state())
-        self.combo_io4_uid.currentIndexChanged.connect(self.io4_uid_changed)
         self.button_start_calibration.clicked.connect(self.start_calibration)
         self.button_abort_calibration.clicked.connect(self.abort_calibration)
         self.label_calibration_step_help.setVisible(False)
@@ -209,8 +208,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.spin_port.setEnabled(False)
 
         # calibration tab
-        stepper_uid = self.combo_stepper_uid.currentText()
-        io4_uid = self.combo_io4_uid.currentText()
+        stepper_uid = self.get_stepper_uid()
+        io4_uid = self.get_io4_uid()
         found_stepper = stepper_uid != NO_STEPPER_BRICK_FOUND
         found_io4 = io4_uid != NO_IO4_BRICKLET_FOUND
         limit_switches = self.check_limit_switches.isChecked()
@@ -341,10 +340,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             # stop any motion in progress and clear current calibration
             self.disable_stepper()
 
-            index = self.combo_stepper_uid.currentIndex()
+            uid = self.get_stepper_uid()
 
-            if index >= 0:
-                uid = self.combo_stepper_uid.itemData(index)
+            if uid != None:
                 self.maximum_positions.pop(uid, None)
                 self.stepper_calibrated = False
 
@@ -388,6 +386,22 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self.stepper != None and self.calibration_step == 0:
             self.stepper.full_brake() # FIXME: invalidate calibration?
 
+    def get_stepper_uid(self):
+        index = self.combo_stepper_uid.currentIndex()
+
+        if index < 0:
+            return None
+
+        return self.combo_stepper_uid.itemData(index)
+
+    def get_io4_uid(self):
+        index = self.combo_io4_uid.currentIndex()
+
+        if index < 0:
+            return None
+
+        return self.combo_io4_uid.itemData(index)
+
     def clear_all_uids(self):
         self.devices = {}
 
@@ -411,52 +425,37 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.stepper = None
         self.stepper_calibrated = False
-        index = self.combo_stepper_uid.currentIndex()
+        uid = self.get_stepper_uid()
 
-        if index >= 0:
-            uid = self.combo_stepper_uid.itemData(index)
+        if uid != None:
+            self.stepper_calibrated = uid in self.maximum_positions
 
-            if uid != None:
-                self.stepper_calibrated = uid in self.maximum_positions
+            if self.stepper_calibrated:
+                maximum_position = self.maximum_positions[uid]
 
-                if self.stepper_calibrated:
-                    maximum_position = self.maximum_positions[uid]
+                self.slider_current_position.setMaximum(maximum_position)
+                self.spin_current_position.setMaximum(maximum_position)
+                self.slider_target_position.setMaximum(maximum_position)
+                self.spin_target_position.setMaximum(maximum_position)
 
-                    self.slider_current_position.setMaximum(maximum_position)
-                    self.spin_current_position.setMaximum(maximum_position)
-                    self.slider_target_position.setMaximum(maximum_position)
-                    self.spin_target_position.setMaximum(maximum_position)
+                self.label_current_position_unit.setText('of {0}'.format(maximum_position))
+                self.label_target_position_unit.setText('of {0}'.format(maximum_position))
 
-                    self.label_current_position_unit.setText('of {0}'.format(maximum_position))
-                    self.label_target_position_unit.setText('of {0}'.format(maximum_position))
+            self.stepper = BrickStepper(uid, self.ipcon)
+            self.stepper.register_callback(BrickStepper.CALLBACK_POSITION_REACHED,
+                                           self.qtcb_stepper_position_reached.emit)
+            self.stepper.register_callback(BrickStepper.CALLBACK_NEW_STATE,
+                                           self.qtcb_stepper_new_state.emit)
 
-                self.stepper = BrickStepper(uid, self.ipcon)
-                self.stepper.register_callback(BrickStepper.CALLBACK_POSITION_REACHED,
-                                               self.qtcb_stepper_position_reached.emit)
-                self.stepper.register_callback(BrickStepper.CALLBACK_NEW_STATE,
-                                               self.qtcb_stepper_new_state.emit)
+            self.velocity_changed()
+            self.speed_ramping_changed()
 
-                self.velocity_changed()
-                self.speed_ramping_changed()
+            if uid in self.maximum_positions:
+                current_position = self.stepper.get_current_position() # FIXME: blocking getter
+                self.slider_target_position.setValue(current_position)
 
-                if uid in self.maximum_positions:
-                    current_position = self.stepper.get_current_position() # FIXME: blocking getter
-                    self.slider_target_position.setValue(current_position)
-
-                    self.update_current_position()
-                    self.current_position_timer.start()
-
-        self.update_ui_state()
-
-    def io4_uid_changed(self):
-        self.io4 = None
-        index = self.combo_io4_uid.currentIndex()
-
-        if index >= 0:
-            uid = self.combo_io4_uid.itemData(index)
-
-            if uid != None:
-                self.io4 = BrickletIO4(uid, self.ipcon)
+                self.update_current_position()
+                self.current_position_timer.start()
 
         self.update_ui_state()
 
@@ -605,10 +604,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
             if self.calibration_step == 3:
                 maximum_position = self.stepper.get_current_position() # FIXME: blocking getter
-                index = self.combo_stepper_uid.currentIndex()
+                uid = self.get_stepper_uid()
 
-                if index >= 0:
-                    uid = self.combo_stepper_uid.itemData(index)
+                if uid != None:
                     self.maximum_positions[uid] = maximum_position
 
                 self.abort_calibration()
