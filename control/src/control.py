@@ -318,8 +318,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self.stepper_enabled:
             return
 
-        print 'enable_stepper'
-
         if self.stepper != None:
             self.stepper.enable()
 
@@ -330,8 +328,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def disable_stepper(self):
         if not self.stepper_enabled:
             return
-
-        print 'disable_stepper'
 
         if self.stepper != None:
             self.stepper.disable()
@@ -601,18 +597,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def cb_stepper_position_reached(self, position):
         if self.stepper != None:
-            print 'cb_stepper_position_reached'
             self.disable_stepper()
 
     def cb_stepper_new_state(self, state_new, state_previous):
         if self.stepper != None and state_new == BrickStepper.STATE_STOP:
-            print 'cb_stepper_new_state', state_new, state_previous
             self.disable_stepper()
 
             if self.calibration_step == 3:
                 maximum_position = self.stepper.get_current_position() # FIXME: blocking getter
-                print 'maximum_position', maximum_position
-
                 index = self.combo_stepper_uid.currentIndex()
 
                 if index >= 0:
