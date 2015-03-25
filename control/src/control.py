@@ -120,6 +120,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.stepper_calibrated = False
         self.stepper_enabled = False
         self.stepper_driving = False
+        self.stepper_reversed = False
 
         self.qtcb_ipcon_enumerate.connect(self.cb_ipcon_enumerate)
         self.qtcb_ipcon_connected.connect(self.cb_ipcon_connected)
@@ -242,7 +243,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.label_calibration_help1.setVisible(stepper_uid != None)
         self.line_calibration_motion.setVisible(self.calibration_in_progress)
         self.button_calibration_forward.setVisible(self.calibration_in_progress)
+        self.button_calibration_forward.setEnabled(not self.button_calibration_backward.isDown())
         self.button_calibration_backward.setVisible(self.calibration_in_progress)
+        self.button_calibration_backward.setEnabled(not self.button_calibration_forward.isDown())
         self.button_calibration_set_minimum.setVisible(self.calibration_in_progress)
         self.button_calibration_set_minimum.setEnabled(not self.stepper_driving)
         self.button_calibration_set_maximum.setVisible(self.calibration_in_progress)
@@ -251,14 +254,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         if self.calibration_in_progress:
             self.button_calibration_start.setText('Apply Calibration')
-            self.label_calibration_help1.setText('Set the desired minimum position near the stepper motor and the desired maximum position opposite to the stepper motor using the buttons below. Afterwards click the <b>Apply Calibration</b> button to use the new calibration.')
+            self.label_calibration_help1.setText('Set the desired minimum and maximum position using the buttons below. Afterwards click the <b>Apply Calibration</b> button to use the new calibration.')
         elif stepper_uid != None:
             if stepper_uid not in self.maximum_positions:
                 self.button_calibration_start.setText('Start Calibration')
                 self.label_calibration_help1.setText('The selected Stepper Brick [<b>{0}</b>] is <b>not</b> calibrated. Click the <b>Start Calibration</b> button to calibrate the selected Stepper Brick.'.format(stepper_uid))
             else:
                 self.button_calibration_start.setText('Start Recalibration')
-                self.label_calibration_help1.setText('The selected Stepper Brick [<b>{0}</b>] is calibrated. It has <b>{1}</b> steps of motion range. If the cart was manually moved since the last calibration, then click the <b>Start Recalibration</b> button to recalibrate the selected Stepper Brick.'.format(stepper_uid, self.maximum_positions[stepper_uid]))
+                self.label_calibration_help1.setText('The selected Stepper Brick [<b>{0}</b>] is calibrated. It has <b>{1}</b> steps of motion range. If the cart was manually moved since the last calibration, then click the <b>Start Recalibration</b> button to recalibrate the selected Stepper Brick.'.format(stepper_uid, abs(self.maximum_positions[stepper_uid])))
         else:
             self.button_calibration_start.setText('Start Calibration')
             self.label_calibration_help1.setText('')
@@ -289,7 +292,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.slider_deceleration.setEnabled(not self.stepper_driving)
         self.spin_deceleration.setEnabled(not self.stepper_driving)
         self.check_manual_motor_power_control.setEnabled(not self.stepper_driving and not self.stepper_enabled and not self.calibration_in_progress)
-        self.check_reverse_cart_direction.setEnabled(not self.stepper_driving)
 
     def get_stepper_uid(self):
         index = self.combo_stepper_uid.currentIndex()
@@ -348,8 +350,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def update_current_position(self):
         if self.stepper != None and self.stepper_calibrated and not self.calibration_in_progress:
-            current_position = self.stepper.get_current_position()
-
+            current_position = abs(self.stepper.get_current_position())
             self.slider_current_position.setValue(current_position)
 
             if current_position == self.slider_target_position.value():
@@ -401,6 +402,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
             if self.stepper_calibrated:
                 maximum_position = self.maximum_positions[uid]
+                self.stepper_reversed = maximum_position < 0
+                maximum_position = abs(maximum_position)
 
                 self.slider_current_position.setMaximum(maximum_position)
                 self.spin_current_position.setMaximum(maximum_position)
@@ -516,6 +519,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self.stepper != None and self.stepper_calibrated and not self.calibration_in_progress:
             current_position = self.stepper.get_current_position()
             target_position = self.slider_target_position.value()
+
+            if self.stepper_reversed:
+                target_position = -target_position
 
             if current_position != target_position:
                 self.prepare_stepper_motion()
