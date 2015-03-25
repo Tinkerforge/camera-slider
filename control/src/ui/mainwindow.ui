@@ -18,7 +18,7 @@
     <item>
      <widget class="QTabWidget" name="tab_widget">
       <property name="currentIndex">
-       <number>4</number>
+       <number>3</number>
       </property>
       <widget class="QWidget" name="tab_connection">
        <attribute name="title">
@@ -476,18 +476,7 @@ p, li { white-space: pre-wrap; }
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_5">
         <item>
-         <layout class="QGridLayout" name="gridLayout_4">
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_iqr_uid_title">
-            <property name="text">
-             <string>Industrial Quad Relay Bricklet:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QComboBox" name="combo_iqr_uid"/>
-          </item>
-         </layout>
+         <layout class="QGridLayout" name="gridLayout_4"/>
         </item>
        </layout>
       </widget>
@@ -682,7 +671,6 @@ p, li { white-space: pre-wrap; }
   <tabstop>spin_target_position</tabstop>
   <tabstop>button_stop_motion</tabstop>
   <tabstop>button_emergency_full_break</tabstop>
-  <tabstop>combo_iqr_uid</tabstop>
   <tabstop>slider_acceleration</tabstop>
   <tabstop>spin_acceleration</tabstop>
   <tabstop>slider_deceleration</tabstop>

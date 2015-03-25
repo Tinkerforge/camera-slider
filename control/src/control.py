@@ -37,7 +37,6 @@ from PyQt4.QtGui import QApplication, QMainWindow, QIcon, QMessageBox
 from tinkerforge.ip_connection import IPConnection
 from tinkerforge.brick_stepper import BrickStepper
 from tinkerforge.bricklet_io4 import BrickletIO4
-from tinkerforge.bricklet_industrial_quad_relay import BrickletIndustrialQuadRelay
 
 from ui_mainwindow import Ui_MainWindow
 
@@ -45,7 +44,6 @@ CONTROL_VERSION = '1.0.0'
 
 NO_STEPPER_BRICK_FOUND = 'No Stepper Brick found'
 NO_IO4_BRICKLET_FOUND = 'No IO-4 Bricklet found'
-NO_IQR_BRICKLET_FOUND = 'No Industrial Quad Relay Bricklet found'
 
 DEVICE_IDENTIFIERS = {11: 'DC Brick',
                       13: 'Master Brick',
@@ -115,7 +113,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.stepper = None
         self.io4 = None
-        self.iqr = None
 
         self.stepper_calibrated = False
         self.stepper_enabled = False
@@ -317,9 +314,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.combo_io4_uid.clear()
         self.combo_io4_uid.addItem(NO_IO4_BRICKLET_FOUND)
-
-        self.combo_iqr_uid.clear()
-        self.combo_iqr_uid.addItem(NO_IQR_BRICKLET_FOUND)
 
         self.update_ui_state()
 
@@ -570,8 +564,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 add_item(self.combo_stepper_uid, NO_STEPPER_BRICK_FOUND)
             elif device_identifier == BrickletIO4.DEVICE_IDENTIFIER:
                 add_item(self.combo_io4_uid, NO_IO4_BRICKLET_FOUND)
-            elif device_identifier == BrickletIndustrialQuadRelay.DEVICE_IDENTIFIER:
-                add_item(self.combo_iqr_uid, NO_IQR_BRICKLET_FOUND)
 
             if str(device_identifier).startswith('1'):
                 def update_items(combo, expected_device_identifier):
@@ -591,7 +583,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
                 update_items(self.combo_stepper_uid, BrickStepper.DEVICE_IDENTIFIER)
                 update_items(self.combo_io4_uid, BrickletIO4.DEVICE_IDENTIFIER)
-                update_items(self.combo_iqr_uid, BrickletIndustrialQuadRelay.DEVICE_IDENTIFIER)
         elif enumeration_type == IPConnection.ENUMERATION_TYPE_DISCONNECTED:
             # FIXME: abort calibration if stepper or io4 get disconnected
 
@@ -611,7 +602,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
             remove_item(self.combo_stepper_uid, NO_STEPPER_BRICK_FOUND)
             remove_item(self.combo_io4_uid, NO_IO4_BRICKLET_FOUND)
-            remove_item(self.combo_iqr_uid, NO_IQR_BRICKLET_FOUND)
 
         self.update_ui_state()
 
