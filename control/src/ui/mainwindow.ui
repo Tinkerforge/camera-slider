@@ -18,7 +18,7 @@
     <item>
      <widget class="QTabWidget" name="tab_widget">
       <property name="currentIndex">
-       <number>2</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="tab_connection">
        <attribute name="title">
@@ -96,7 +96,7 @@
        <layout class="QVBoxLayout" name="verticalLayout_3">
         <item>
          <layout class="QGridLayout" name="gridLayout_2">
-          <item row="4" column="0">
+          <item row="5" column="0">
            <widget class="QLabel" name="label_io4_uid_title">
             <property name="text">
              <string>IO-4 Bricklet:</string>
@@ -110,31 +110,14 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="1">
-           <widget class="QLabel" name="label_calibration">
-            <property name="text">
-             <string>&lt;calibration&gt;</string>
-            </property>
-            <property name="wordWrap">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="label_calibration_title">
-            <property name="text">
-             <string>Calibration:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0" colspan="2">
+          <item row="3" column="0" colspan="5">
            <widget class="Line" name="line_3">
             <property name="orientation">
              <enum>Qt::Horizontal</enum>
             </property>
            </widget>
           </item>
-          <item row="0" column="1">
+          <item row="0" column="1" colspan="4">
            <widget class="QComboBox" name="combo_stepper_uid">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -144,50 +127,112 @@
             </property>
            </widget>
           </item>
-          <item row="4" column="1">
+          <item row="5" column="1" colspan="4">
            <widget class="QComboBox" name="combo_io4_uid"/>
           </item>
-          <item row="3" column="1">
+          <item row="4" column="1" colspan="4">
            <widget class="QCheckBox" name="check_limit_switches">
             <property name="text">
-             <string>Limit Switches</string>
+             <string>Use Limit Switches</string>
             </property>
            </widget>
           </item>
-          <item row="5" column="0" colspan="2">
+          <item row="6" column="0" colspan="5">
            <widget class="Line" name="line_5">
             <property name="orientation">
              <enum>Qt::Horizontal</enum>
             </property>
            </widget>
           </item>
-          <item row="7" column="1">
-           <widget class="QLabel" name="label_calibration_step_help">
+          <item row="8" column="1" colspan="4">
+           <widget class="QLabel" name="label_calibration_help1">
             <property name="text">
-             <string>&lt;calibration-step-help&gt;</string>
+             <string>&lt;calibration-help1&gt;</string>
             </property>
             <property name="wordWrap">
              <bool>true</bool>
             </property>
            </widget>
           </item>
-          <item row="6" column="1">
-           <layout class="QHBoxLayout" name="horizontalLayout_9">
-            <item>
-             <widget class="QPushButton" name="button_start_calibration">
-              <property name="text">
-               <string>Start Calibration</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="button_abort_calibration">
-              <property name="text">
-               <string>Abort Calibration</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
+          <item row="1" column="1" colspan="4">
+           <widget class="QCheckBox" name="check_motor_power">
+            <property name="text">
+             <string>Enable Motor Power</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1" colspan="4">
+           <widget class="QLabel" name="label_motor_power_help">
+            <property name="text">
+             <string>Manual stepper motor power control is enabled on the &lt;b&gt;Advanced Options&lt;/b&gt; tab. Therefore, the stepper motor power has to be enabled and disabled manually. This allows the stepper motor to hold the cart in place while it is not moving to a target position.</string>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="9" column="0" colspan="5">
+           <widget class="Line" name="line_calibration_motion">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item row="10" column="1">
+           <widget class="QPushButton" name="button_calibration_forward">
+            <property name="text">
+             <string>Forward</string>
+            </property>
+           </widget>
+          </item>
+          <item row="10" column="2">
+           <widget class="QPushButton" name="button_calibration_backward">
+            <property name="text">
+             <string>Backward</string>
+            </property>
+           </widget>
+          </item>
+          <item row="11" column="1" colspan="4">
+           <widget class="QLabel" name="label_calibration_help2">
+            <property name="text">
+             <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Ubuntu'; font-size:11pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Press and hold the &lt;span style=&quot; font-weight:600;&quot;&gt;Forward&lt;/span&gt; or &lt;span style=&quot; font-weight:600;&quot;&gt;Backward&lt;/span&gt; button to move the cart slowly forward or backward. The cart only moves while the button is pressed and stops when the button is released. Click the &lt;span style=&quot; font-weight:600;&quot;&gt;Set Minimum&lt;/span&gt; or &lt;span style=&quot; font-weight:600;&quot;&gt;Set Maximum&lt;/span&gt; button to use the current position as the new minimum or maximum position.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="10" column="3">
+           <widget class="QPushButton" name="button_calibration_set_minimum">
+            <property name="text">
+             <string>Set Minimum</string>
+            </property>
+           </widget>
+          </item>
+          <item row="10" column="4">
+           <widget class="QPushButton" name="button_calibration_set_maximum">
+            <property name="text">
+             <string>Set Maximum</string>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="1" colspan="2">
+           <widget class="QPushButton" name="button_calibration_start">
+            <property name="text">
+             <string>Start Calibration</string>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="3" colspan="2">
+           <widget class="QPushButton" name="button_calibration_abort">
+            <property name="text">
+             <string>Abort Calibration</string>
+            </property>
+           </widget>
           </item>
          </layout>
         </item>
@@ -383,24 +428,7 @@
             </property>
            </widget>
           </item>
-          <item row="3" column="1" colspan="2">
-           <widget class="QCheckBox" name="check_enable_power">
-            <property name="text">
-             <string>Enable Power</string>
-            </property>
-           </widget>
-          </item>
           <item row="4" column="1" colspan="2">
-           <widget class="QLabel" name="label_enable_power_help">
-            <property name="text">
-             <string>Manual stepper motor power control is enabled on the Advanced Options tab. Therefore, the stepper motor power has to be enabled and disabled manually. This allows the stepper motor to hold the cart in place while it is not moving.</string>
-            </property>
-            <property name="wordWrap">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="5" column="1" colspan="2">
            <layout class="QHBoxLayout" name="horizontalLayout_10">
             <item>
              <widget class="QPushButton" name="button_stop_motion">
@@ -417,6 +445,13 @@
              </widget>
             </item>
            </layout>
+          </item>
+          <item row="3" column="0" colspan="3">
+           <widget class="Line" name="line_6">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
           </item>
          </layout>
         </item>
@@ -526,23 +561,23 @@
            </layout>
           </item>
           <item row="6" column="1" colspan="2">
-           <widget class="QCheckBox" name="check_reverse_direction">
+           <widget class="QCheckBox" name="check_reverse_cart_direction">
             <property name="text">
-             <string>Reverse Direction</string>
+             <string>Reverse Cart Direction</string>
             </property>
            </widget>
           </item>
           <item row="3" column="1" colspan="2">
-           <widget class="QCheckBox" name="check_manual_power_control">
+           <widget class="QCheckBox" name="check_manual_motor_power_control">
             <property name="text">
-             <string>Manual Power Control</string>
+             <string>Manual Motor Power Control</string>
             </property>
            </widget>
           </item>
           <item row="4" column="1" colspan="2">
-           <widget class="QLabel" name="label_manual_power_control_help">
+           <widget class="QLabel" name="label_manual_motor_power_control_help">
             <property name="text">
-             <string>By default the stepper motor power is automatically disabled when the cart reaches its target position. Therefore, the cart is not actively hold in place and can be moved by hand or gravity while the stepper motor is not driving it. Enable this option to keep the stepper motor continuously powered and the cart hold in place as long as the motor power is manually enabled on the &lt;b&gt;Motion Control&lt;/b&gt; tab or as long as a &lt;b&gt;Camera Control&lt;/b&gt; run is in progress.</string>
+             <string>By default the stepper motor power is automatically disabled when the cart reaches its target position. Therefore, the cart is not actively held in place and can be moved by hand or gravity while the stepper motor is not driving it. Enable this option to keep the stepper motor continuously powered and the cart held in place as long as the stepper motor power is manually enabled on the &lt;b&gt;Calibration&lt;/b&gt; tab.</string>
             </property>
             <property name="wordWrap">
              <bool>true</bool>
@@ -564,9 +599,9 @@
            </widget>
           </item>
           <item row="7" column="1" colspan="2">
-           <widget class="QLabel" name="label_reverse_direction_help">
+           <widget class="QLabel" name="label_reverse_cart_direction_help">
             <property name="text">
-             <string>Depending on how the stepper motor is connected to the Stepper Brick it might rotate in the wrong direction. Enable this option to compensate this in software.</string>
+             <string>Depending on how the stepper motor is connected to the Stepper Brick it might rotate in the wrong direction making the cart move in the wrong direction. Enable this option to compensate this in software.</string>
             </property>
             <property name="wordWrap">
              <bool>true</bool>
@@ -636,7 +671,7 @@
           <property name="sizeHint" stdset="0">
            <size>
             <width>20</width>
-            <height>0</height>
+            <height>40</height>
            </size>
           </property>
          </spacer>
@@ -648,6 +683,37 @@
    </layout>
   </widget>
  </widget>
+ <tabstops>
+  <tabstop>tab_widget</tabstop>
+  <tabstop>edit_host</tabstop>
+  <tabstop>spin_port</tabstop>
+  <tabstop>button_connect</tabstop>
+  <tabstop>combo_stepper_uid</tabstop>
+  <tabstop>check_motor_power</tabstop>
+  <tabstop>check_limit_switches</tabstop>
+  <tabstop>combo_io4_uid</tabstop>
+  <tabstop>button_calibration_start</tabstop>
+  <tabstop>button_calibration_abort</tabstop>
+  <tabstop>button_calibration_forward</tabstop>
+  <tabstop>button_calibration_backward</tabstop>
+  <tabstop>button_calibration_set_minimum</tabstop>
+  <tabstop>button_calibration_set_maximum</tabstop>
+  <tabstop>slider_velocity</tabstop>
+  <tabstop>spin_velocity</tabstop>
+  <tabstop>slider_current_position</tabstop>
+  <tabstop>spin_current_position</tabstop>
+  <tabstop>slider_target_position</tabstop>
+  <tabstop>spin_target_position</tabstop>
+  <tabstop>button_stop_motion</tabstop>
+  <tabstop>button_emergency_full_break</tabstop>
+  <tabstop>combo_iqr_uid</tabstop>
+  <tabstop>slider_acceleration</tabstop>
+  <tabstop>spin_acceleration</tabstop>
+  <tabstop>slider_deceleration</tabstop>
+  <tabstop>spin_deceleration</tabstop>
+  <tabstop>check_manual_motor_power_control</tabstop>
+  <tabstop>check_reverse_cart_direction</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

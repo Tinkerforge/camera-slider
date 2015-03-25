@@ -109,8 +109,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.devices = {} # uid -> (connected_uid, device_identifier)
 
         self.maximum_positions = {} # uid -> maximum_position
-        self.calibration_step = 0
-        self.pending_minimum_position = 0
+        self.calibration_in_progress = False
+        self.temporary_minimum_position = None
+        self.temporary_maximum_position = None
 
         self.stepper = None
         self.io4 = None
@@ -118,6 +119,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.stepper_calibrated = False
         self.stepper_enabled = False
+        self.stepper_driving = False
 
         self.qtcb_ipcon_enumerate.connect(self.cb_ipcon_enumerate)
         self.qtcb_ipcon_connected.connect(self.cb_ipcon_connected)
@@ -141,10 +143,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # prepare calibration tab
         self.combo_stepper_uid.currentIndexChanged.connect(self.stepper_uid_changed)
+        self.check_motor_power.stateChanged.connect(self.motor_power_changed)
         self.check_limit_switches.stateChanged.connect(lambda: self.update_ui_state())
-        self.button_start_calibration.clicked.connect(self.start_calibration)
-        self.button_abort_calibration.clicked.connect(self.abort_calibration)
-        self.label_calibration_step_help.setVisible(False)
+        self.button_calibration_start.clicked.connect(self.calibration_start)
+        self.button_calibration_abort.clicked.connect(self.calibration_abort)
+        self.button_calibration_forward.pressed.connect(self.calibration_forward_pressed)
+        self.button_calibration_forward.released.connect(self.calibration_forward_released)
+        self.button_calibration_backward.pressed.connect(self.calibration_backward_pressed)
+        self.button_calibration_backward.released.connect(self.calibration_backward_released)
+        self.button_calibration_set_minimum.clicked.connect(self.calibration_set_minimum)
+        self.button_calibration_set_maximum.clicked.connect(self.calibration_set_maximum)
 
         # prepare motion control tab
         self.velocity_syncer = SliderSpinSyncer(self, self.slider_velocity, self.spin_velocity, self.velocity_changed)
@@ -152,16 +160,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.target_position_syncer = SliderSpinSyncer(self, self.slider_target_position, self.spin_target_position, self.target_position_changed)
 
         self.button_stop_motion.clicked.connect(self.stop_motion)
-        self.button_emergency_full_break.clicked.connect(self.emergency_full_break)
+        #self.button_emergency_full_break.clicked.connect(self.emergency_full_break) # FIXME
 
         self.current_position_timer = QTimer(self)
         self.current_position_timer.setInterval(50)
         self.current_position_timer.timeout.connect(self.update_current_position)
 
         # prepare camera control tab
-        self.combo_iqr_uid.currentIndexChanged.connect(self.iqr_uid_changed)
 
         # prepare advanced options tab
+        self.check_manual_motor_power_control.stateChanged.connect(lambda: self.update_ui_state())
+
         self.acceleration_syncer = SliderSpinSyncer(self, self.slider_acceleration, self.spin_acceleration, self.speed_ramping_changed)
         self.deceleration_syncer = SliderSpinSyncer(self, self.slider_deceleration, self.spin_deceleration, self.speed_ramping_changed)
 
@@ -188,7 +197,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.tab_widget.setTabEnabled(TAB_CALIBRATION, connected)
         self.tab_widget.setTabEnabled(TAB_MOTION_CONTROL, connected and self.stepper_calibrated)
-        self.tab_widget.setTabEnabled(TAB_CAMERA_CONTROL, connected and self.stepper_calibrated)
+        self.tab_widget.setTabEnabled(TAB_CAMERA_CONTROL, connected and self.stepper_calibrated and False) # FIXME
         self.tab_widget.setTabEnabled(TAB_ADVANCED_OPTIONS, connected)
 
         # connection tab
@@ -210,181 +219,77 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # calibration tab
         stepper_uid = self.get_stepper_uid()
         io4_uid = self.get_io4_uid()
-        found_stepper = stepper_uid != NO_STEPPER_BRICK_FOUND
-        found_io4 = io4_uid != NO_IO4_BRICKLET_FOUND
         limit_switches = self.check_limit_switches.isChecked()
+        manual_motor_power_control = self.check_manual_motor_power_control.isChecked()
+        stepper_motion_possible = self.stepper_motion_possible()
 
-        self.combo_stepper_uid.setEnabled(found_stepper and self.calibration_step == 0 and not self.stepper_enabled)
-        self.label_calibration_title.setVisible(found_stepper)
-        self.label_calibration.setVisible(found_stepper)
-        self.check_limit_switches.setEnabled(self.calibration_step == 0)
-        self.combo_io4_uid.setEnabled(found_io4 and self.calibration_step == 0)
-        self.button_start_calibration.setEnabled(found_stepper and (not limit_switches or found_io4) and (self.calibration_step != 0 or not self.stepper_enabled))
-
-        if found_stepper:
-            if stepper_uid not in self.maximum_positions:
-                self.label_calibration.setText('Not calibrated')
-            else:
-                self.label_calibration.setText('Calibrated, {0} steps of movement range'.format(self.maximum_positions[stepper_uid]))
-
+        self.combo_stepper_uid.setEnabled(stepper_uid != None and not self.calibration_in_progress and not self.stepper_enabled)
+        self.check_motor_power.setVisible(manual_motor_power_control)
+        self.check_motor_power.setEnabled(not self.calibration_in_progress and not self.stepper_driving)
+        self.label_motor_power_help.setVisible(manual_motor_power_control)
+        self.check_limit_switches.setEnabled(not self.calibration_in_progress and False) # FIXME
         self.label_io4_uid_title.setVisible(limit_switches)
         self.combo_io4_uid.setVisible(limit_switches)
+        self.combo_io4_uid.setEnabled(io4_uid != None and not self.calibration_in_progress)
+        self.button_calibration_start.setEnabled(stepper_uid != None and \
+                                                 (not limit_switches or io4_uid != None) and \
+                                                 (not self.calibration_in_progress or \
+                                                  (self.temporary_minimum_position != None and \
+                                                   self.temporary_maximum_position != None)) and \
+                                                 not self.stepper_driving and
+                                                 stepper_motion_possible)
+        self.button_calibration_abort.setEnabled(self.calibration_in_progress and not self.stepper_driving)
+        self.label_calibration_help1.setVisible(stepper_uid != None)
+        self.line_calibration_motion.setVisible(self.calibration_in_progress)
+        self.button_calibration_forward.setVisible(self.calibration_in_progress)
+        self.button_calibration_backward.setVisible(self.calibration_in_progress)
+        self.button_calibration_set_minimum.setVisible(self.calibration_in_progress)
+        self.button_calibration_set_minimum.setEnabled(not self.stepper_driving)
+        self.button_calibration_set_maximum.setVisible(self.calibration_in_progress)
+        self.button_calibration_set_maximum.setEnabled(not self.stepper_driving)
+        self.label_calibration_help2.setVisible(self.calibration_in_progress)
 
-        self.button_abort_calibration.setVisible(self.calibration_step != 0)
-        self.label_calibration_step_help.setVisible(self.calibration_step != 0)
-
-        if self.calibration_step == 1:
-            self.button_start_calibration.setText('Set Minimum Position')
-
-            if limit_switches:
-                self.label_calibration_step_help.setText('FIXME')
+        if self.calibration_in_progress:
+            self.button_calibration_start.setText('Apply Calibration')
+            self.label_calibration_help1.setText('Set the desired minimum position near the stepper motor and the desired maximum position opposite to the stepper motor using the buttons below. Afterwards click the <b>Apply Calibration</b> button to use the new calibration.')
+        elif stepper_uid != None:
+            if stepper_uid not in self.maximum_positions:
+                self.button_calibration_start.setText('Start Calibration')
+                self.label_calibration_help1.setText('The selected Stepper Brick [<b>{0}</b>] is <b>not</b> calibrated. Click the <b>Start Calibration</b> button to calibrate the selected Stepper Brick.'.format(stepper_uid))
             else:
-                self.label_calibration_step_help.setText('Manually move the cart to the desired minimum position near the stepper motor then click the <b>Set Minimum Position</b> button to use that position as the new minimum position.')
-        elif self.calibration_step == 2:
-            self.button_start_calibration.setText('Drive Cart Forward')
-
-            if limit_switches:
-                self.label_calibration_step_help.setText('FIXME')
-            else:
-                self.label_calibration_step_help.setText('Click the <b>Drive Cart Forward</b> button to make the cart slowly drive away from the stepper motor. When the cart reaches the desired maximum position then click the <b>Stop Cart And Set Maximum Position</b> button to use that position as the new maximum position.')
-        elif self.calibration_step == 3:
-            self.button_start_calibration.setText('Stop Cart And Set Maximum Position')
-
-            if limit_switches:
-                self.label_calibration_step_help.setText('FIXME')
-            else:
-                self.label_calibration_step_help.setText('The cart is slowly driving away from the stepper motor. When the cart reaches the desired maximum position then click the <b>Stop Cart And Set Maximum Position</b> button to use that position as the new maximum position. Afterwards the calibration process is finished.')
+                self.button_calibration_start.setText('Start Recalibration')
+                self.label_calibration_help1.setText('The selected Stepper Brick [<b>{0}</b>] is calibrated. It has <b>{1}</b> steps of motion range. If the cart was manually moved since the last calibration, then click the <b>Start Recalibration</b> button to recalibrate the selected Stepper Brick.'.format(stepper_uid, self.maximum_positions[stepper_uid]))
         else:
-            self.button_start_calibration.setText('Start Calibration')
-            # FIXME: show hint that "start calibration" will abort pending motions
+            self.button_calibration_start.setText('Start Calibration')
+            self.label_calibration_help1.setText('')
+
+        if self.temporary_minimum_position == None:
+            self.button_calibration_set_minimum.setText('Set Minimum')
+        else:
+            self.button_calibration_set_minimum.setText('Set Minimum Again')
+
+        if self.temporary_maximum_position == None:
+            self.button_calibration_set_maximum.setText('Set Maximum')
+        else:
+            self.button_calibration_set_maximum.setText('Set Maximum Again')
 
         # motion control tab
-        self.slider_velocity.setEnabled(not self.stepper_enabled)
-        self.spin_velocity.setEnabled(not self.stepper_enabled)
-        self.slider_target_position.setEnabled(not self.stepper_enabled)
-        self.spin_target_position.setEnabled(not self.stepper_enabled)
-        self.button_stop_motion.setEnabled(self.stepper_enabled)
-        self.button_emergency_full_break.setEnabled(self.stepper_enabled)
+        self.slider_velocity.setEnabled(not self.stepper_driving)
+        self.spin_velocity.setEnabled(not self.stepper_driving)
+        self.slider_target_position.setEnabled(not self.stepper_driving and stepper_motion_possible)
+        self.spin_target_position.setEnabled(not self.stepper_driving and stepper_motion_possible)
+        self.button_stop_motion.setEnabled(self.stepper_driving)
+        self.button_emergency_full_break.setEnabled(self.stepper_driving and False) # FIXME
 
         # camera control tab
 
         # advanced options tab
-        self.slider_acceleration.setEnabled(not self.stepper_enabled)
-        self.spin_acceleration.setEnabled(not self.stepper_enabled)
-        self.slider_deceleration.setEnabled(not self.stepper_enabled)
-        self.spin_deceleration.setEnabled(not self.stepper_enabled)
-
-    def update_current_position(self):
-        if self.stepper != None and self.stepper_calibrated and self.calibration_step == 0:
-            current_position = self.stepper.get_current_position()
-
-            self.slider_current_position.setValue(current_position)
-
-            if current_position == self.slider_target_position.value():
-                self.disable_stepper()
-
-    def connect_or_disconnect(self):
-        connection_state = self.ipcon.get_connection_state()
-
-        if connection_state == IPConnection.CONNECTION_STATE_DISCONNECTED:
-            try:
-                self.button_connect.setDisabled(True)
-                self.button_connect.setText('Connecting ...')
-                self.ipcon.connect(self.edit_host.text(), self.spin_port.value())
-            except Exception as e:
-                self.button_connect.setDisabled(False)
-                self.button_connect.setText('Connect')
-
-                QMessageBox.critical(self, 'Connection',
-                                     'Could not connect. Please check host, check ' +
-                                     'port and ensure that Brick Daemon is running.')
-        else:
-            self.disconnect()
-
-    def disconnect(self):
-        # FIXME: if stepper is still moving ask user about exiting then stop and disable stepper
-
-        self.abort_calibration()
-
-        try:
-            self.ipcon.disconnect()
-        except:
-            pass
-
-        self.clear_all_uids()
-
-    def enable_stepper(self):
-        if self.stepper_enabled:
-            return
-
-        if self.stepper != None:
-            self.stepper.enable()
-
-        self.stepper_enabled = True
-
-        self.update_ui_state()
-
-    def disable_stepper(self):
-        if not self.stepper_enabled:
-            return
-
-        if self.stepper != None:
-            self.stepper.disable()
-
-        self.stepper_enabled = False
-
-        self.update_ui_state()
-
-    def start_calibration(self):
-        if self.calibration_step == 0:
-            # stop any motion in progress and clear current calibration
-            self.disable_stepper()
-
-            uid = self.get_stepper_uid()
-
-            if uid != None:
-                self.maximum_positions.pop(uid, None)
-                self.stepper_calibrated = False
-
-            self.calibration_step = 1
-        elif self.calibration_step == 1:
-            # set minimum position to zero
-            self.stepper.set_current_position(0)
-
-            self.calibration_step = 2
-        elif self.calibration_step == 2:
-            # drive forward slowly
-            self.stepper.set_max_velocity(2000)
-            self.stepper.set_speed_ramping(65535, 65535)
-            self.enable_stepper()
-            self.stepper.drive_forward()
-
-            self.calibration_step = 3
-        elif self.calibration_step == 3:
-            # stop stepper motor. maximum position will be recorded in
-            # new-state callback when stepper motor has really stopped
-            self.stepper.stop()
-
-        self.update_ui_state()
-
-    def abort_calibration(self):
-        if self.calibration_step == 0:
-            return
-
-        self.calibration_step = 0
-
-        self.emergency_full_break()
-        self.velocity_changed()
-        self.speed_ramping_changed()
-        self.update_ui_state()
-
-    def stop_motion(self):
-        if self.stepper != None and self.calibration_step == 0:
-            self.stepper.stop()
-
-    def emergency_full_break(self):
-        if self.stepper != None and self.calibration_step == 0:
-            self.stepper.full_brake() # FIXME: invalidate calibration?
+        self.slider_acceleration.setEnabled(not self.stepper_driving)
+        self.spin_acceleration.setEnabled(not self.stepper_driving)
+        self.slider_deceleration.setEnabled(not self.stepper_driving)
+        self.spin_deceleration.setEnabled(not self.stepper_driving)
+        self.check_manual_motor_power_control.setEnabled(not self.stepper_driving and not self.stepper_enabled and not self.calibration_in_progress)
+        self.check_reverse_cart_direction.setEnabled(not self.stepper_driving)
 
     def get_stepper_uid(self):
         index = self.combo_stepper_uid.currentIndex()
@@ -415,6 +320,70 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.combo_iqr_uid.addItem(NO_IQR_BRICKLET_FOUND)
 
         self.update_ui_state()
+
+    def stepper_motion_possible(self):
+        return not self.check_manual_motor_power_control.isChecked() or self.check_motor_power.isChecked()
+
+    def prepare_stepper_motion(self):
+        if self.stepper_driving:
+            return
+
+        if self.stepper != None and not self.check_manual_motor_power_control.isChecked():
+            self.stepper.enable()
+            self.stepper_enabled = True
+
+        self.stepper_driving = True
+        self.update_ui_state()
+
+    def stepper_motion_stopped(self):
+        if not self.stepper_driving:
+            return
+
+        if self.stepper != None and not self.check_manual_motor_power_control.isChecked():
+            self.stepper.disable()
+            self.stepper_enabled = False
+
+        self.stepper_driving = False
+        self.update_ui_state()
+
+    def update_current_position(self):
+        if self.stepper != None and self.stepper_calibrated and not self.calibration_in_progress:
+            current_position = self.stepper.get_current_position()
+
+            self.slider_current_position.setValue(current_position)
+
+            if current_position == self.slider_target_position.value():
+                self.stepper_motion_stopped()
+
+    def connect_or_disconnect(self):
+        connection_state = self.ipcon.get_connection_state()
+
+        if connection_state == IPConnection.CONNECTION_STATE_DISCONNECTED:
+            try:
+                self.button_connect.setDisabled(True)
+                self.button_connect.setText('Connecting ...')
+                self.ipcon.connect(self.edit_host.text(), self.spin_port.value())
+            except Exception as e:
+                self.button_connect.setDisabled(False)
+                self.button_connect.setText('Connect')
+
+                QMessageBox.critical(self, 'Connection',
+                                     'Could not connect. Please check host, check ' +
+                                     'port and ensure that Brick Daemon is running.')
+        else:
+            self.disconnect()
+
+    def disconnect(self):
+        # FIXME: if stepper is still moving ask user about exiting, then stop and disable stepper
+
+        self.calibration_abort()
+
+        try:
+            self.ipcon.disconnect()
+        except:
+            pass
+
+        self.clear_all_uids()
 
     def stepper_uid_changed(self):
         self.current_position_timer.stop()
@@ -459,33 +428,105 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.update_ui_state()
 
+    def motor_power_changed(self):
+        if self.stepper != None and self.check_manual_motor_power_control.isChecked():
+            if self.check_motor_power.isChecked():
+                self.stepper.enable()
+                self.stepper_enabled = True
+            else:
+                self.stepper.disable()
+                self.stepper_enabled = False
+
+            self.update_ui_state()
+
+    def calibration_start(self):
+        if not self.calibration_in_progress:
+            uid = self.get_stepper_uid()
+
+            if uid != None:
+                self.maximum_positions.pop(uid, None)
+                self.stepper_calibrated = False
+
+            self.calibration_in_progress = True
+            self.temporary_minimum_position = None
+            self.temporary_maximum_position = None
+        elif self.temporary_minimum_position != None and self.temporary_maximum_position != None:
+            uid = self.get_stepper_uid()
+
+            if uid != None:
+                self.maximum_positions[uid] = self.temporary_maximum_position - self.temporary_minimum_position
+                new_current_position = self.stepper.get_current_position() - self.temporary_minimum_position
+                self.stepper.set_current_position(new_current_position)
+
+            self.calibration_abort()
+            self.stepper_uid_changed()
+
+        self.update_ui_state()
+
+    def calibration_abort(self):
+        if not self.calibration_in_progress:
+            return
+
+        self.calibration_in_progress = False
+        self.temporary_minimum_position = None
+        self.temporary_maximum_position = None
+
+        self.stop_motion()
+        self.velocity_changed()
+        self.speed_ramping_changed()
+        self.update_ui_state()
+
+    def calibration_forward_pressed(self):
+        if self.stepper != None and self.calibration_in_progress:
+            self.stepper.set_max_velocity(2000)
+            self.stepper.set_speed_ramping(65535, 65535)
+            self.prepare_stepper_motion()
+            self.stepper.drive_forward()
+
+    def calibration_forward_released(self):
+        if self.stepper != None and self.calibration_in_progress:
+            self.stepper.stop()
+
+    def calibration_backward_pressed(self):
+        if self.stepper != None and self.calibration_in_progress:
+            self.stepper.set_max_velocity(2000)
+            self.stepper.set_speed_ramping(65535, 65535)
+            self.prepare_stepper_motion()
+            self.stepper.drive_backward()
+
+    def calibration_backward_released(self):
+        if self.stepper != None and self.calibration_in_progress:
+            self.stepper.stop()
+
+    def calibration_set_minimum(self):
+        if self.stepper != None and self.calibration_in_progress and not self.stepper_driving:
+            self.temporary_minimum_position = self.stepper.get_current_position()
+            self.update_ui_state()
+
+    def calibration_set_maximum(self):
+        if self.stepper != None and self.calibration_in_progress and not self.stepper_driving:
+            self.temporary_maximum_position = self.stepper.get_current_position()
+            self.update_ui_state()
+
     def velocity_changed(self):
-        if self.stepper != None and self.calibration_step == 0:
+        if self.stepper != None and not self.calibration_in_progress:
             self.stepper.set_max_velocity(self.slider_velocity.value())
 
     def target_position_changed(self):
-        if self.stepper != None and self.stepper_calibrated and self.calibration_step == 0:
+        if self.stepper != None and self.stepper_calibrated and not self.calibration_in_progress:
             current_position = self.stepper.get_current_position()
             target_position = self.slider_target_position.value()
 
             if current_position != target_position:
-                self.enable_stepper()
+                self.prepare_stepper_motion()
                 self.stepper.set_target_position(target_position)
 
-    def iqr_uid_changed(self):
-        self.iqr = None
-        index = self.combo_iqr_uid.currentIndex()
-
-        if index >= 0:
-            uid = self.combo_iqr_uid.itemData(index)
-
-            if uid != None:
-                self.iqr = BrickletIndustrialQuadRelay(uid, self.ipcon)
-
-        self.update_ui_state()
+    def stop_motion(self):
+        if self.stepper != None and not self.calibration_in_progress:
+            self.stepper.stop()
 
     def speed_ramping_changed(self):
-        if self.stepper != None and self.calibration_step == 0:
+        if self.stepper != None and not self.calibration_in_progress:
             acceleration = self.slider_acceleration.value()
             deceleration = self.slider_deceleration.value()
 
@@ -596,21 +637,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def cb_stepper_position_reached(self, position):
         if self.stepper != None:
-            self.disable_stepper()
+            self.stepper_motion_stopped()
 
     def cb_stepper_new_state(self, state_new, state_previous):
         if self.stepper != None and state_new == BrickStepper.STATE_STOP:
-            self.disable_stepper()
-
-            if self.calibration_step == 3:
-                maximum_position = self.stepper.get_current_position() # FIXME: blocking getter
-                uid = self.get_stepper_uid()
-
-                if uid != None:
-                    self.maximum_positions[uid] = maximum_position
-
-                self.abort_calibration()
-                self.stepper_uid_changed()
+            self.stepper_motion_stopped()
 
 class Application(QApplication):
     def __init__(self, args):
