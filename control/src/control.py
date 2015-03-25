@@ -141,7 +141,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # prepare calibration tab
         self.combo_stepper_uid.currentIndexChanged.connect(self.stepper_uid_changed)
-        self.check_motor_power.stateChanged.connect(self.motor_power_changed)
+        self.check_automatic_power_control.stateChanged.connect(self.automatic_power_control_changed)
         self.check_limit_switches.stateChanged.connect(lambda: self.update_ui_state())
         self.button_calibration_start.clicked.connect(self.calibration_start)
         self.button_calibration_abort.clicked.connect(self.calibration_abort)
@@ -167,8 +167,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # prepare camera control tab
 
         # prepare advanced options tab
-        self.check_manual_motor_power_control.stateChanged.connect(lambda: self.update_ui_state())
-
         self.acceleration_syncer = SliderSpinSyncer(self, self.slider_acceleration, self.spin_acceleration, self.speed_ramping_changed)
         self.deceleration_syncer = SliderSpinSyncer(self, self.slider_deceleration, self.spin_deceleration, self.speed_ramping_changed)
 
@@ -218,13 +216,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         stepper_uid = self.get_stepper_uid()
         io4_uid = self.get_io4_uid()
         limit_switches = self.check_limit_switches.isChecked()
-        manual_motor_power_control = self.check_manual_motor_power_control.isChecked()
-        stepper_motion_possible = self.stepper_motion_possible()
+        automatic_power_control = self.check_automatic_power_control.isChecked()
 
         self.combo_stepper_uid.setEnabled(stepper_uid != None and not self.calibration_in_progress and not self.stepper_enabled)
-        self.check_motor_power.setVisible(manual_motor_power_control)
-        self.check_motor_power.setEnabled(not self.calibration_in_progress and not self.stepper_driving)
-        self.label_motor_power_help.setVisible(manual_motor_power_control)
+        self.check_automatic_power_control.setEnabled(not self.calibration_in_progress and not self.stepper_driving)
         self.check_limit_switches.setEnabled(not self.calibration_in_progress and False) # FIXME
         self.label_io4_uid_title.setVisible(limit_switches)
         self.combo_io4_uid.setVisible(limit_switches)
@@ -234,8 +229,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                                                  (not self.calibration_in_progress or \
                                                   (self.temporary_minimum_position != None and \
                                                    self.temporary_maximum_position != None)) and \
-                                                 not self.stepper_driving and
-                                                 stepper_motion_possible)
+                                                 not self.stepper_driving)
         self.button_calibration_abort.setEnabled(self.calibration_in_progress and not self.stepper_driving)
         self.label_calibration_help1.setVisible(stepper_uid != None)
         self.line_calibration_motion.setVisible(self.calibration_in_progress)
@@ -276,8 +270,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # motion control tab
         self.slider_velocity.setEnabled(not self.stepper_driving)
         self.spin_velocity.setEnabled(not self.stepper_driving)
-        self.slider_target_position.setEnabled(not self.stepper_driving and stepper_motion_possible)
-        self.spin_target_position.setEnabled(not self.stepper_driving and stepper_motion_possible)
+        self.slider_target_position.setEnabled(not self.stepper_driving)
+        self.spin_target_position.setEnabled(not self.stepper_driving)
         self.button_stop_motion.setEnabled(self.stepper_driving)
         self.button_emergency_full_break.setEnabled(self.stepper_driving and False) # FIXME
 
@@ -288,7 +282,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.spin_acceleration.setEnabled(not self.stepper_driving)
         self.slider_deceleration.setEnabled(not self.stepper_driving)
         self.spin_deceleration.setEnabled(not self.stepper_driving)
-        self.check_manual_motor_power_control.setEnabled(not self.stepper_driving and not self.stepper_enabled and not self.calibration_in_progress)
 
     def get_stepper_uid(self):
         index = self.combo_stepper_uid.currentIndex()
@@ -317,14 +310,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.update_ui_state()
 
-    def stepper_motion_possible(self):
-        return not self.check_manual_motor_power_control.isChecked() or self.check_motor_power.isChecked()
-
     def prepare_stepper_motion(self):
         if self.stepper_driving:
             return
 
-        if self.stepper != None and not self.check_manual_motor_power_control.isChecked():
+        if self.stepper != None and self.check_automatic_power_control.isChecked():
             self.stepper.enable()
             self.stepper_enabled = True
 
@@ -335,7 +325,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if not self.stepper_driving:
             return
 
-        if self.stepper != None and not self.check_manual_motor_power_control.isChecked():
+        if self.stepper != None and self.check_automatic_power_control.isChecked():
             self.stepper.disable()
             self.stepper_enabled = False
 
@@ -425,14 +415,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.update_ui_state()
 
-    def motor_power_changed(self):
-        if self.stepper != None and self.check_manual_motor_power_control.isChecked():
-            if self.check_motor_power.isChecked():
-                self.stepper.enable()
-                self.stepper_enabled = True
-            else:
+    def automatic_power_control_changed(self):
+        if self.stepper != None:
+            if self.check_automatic_power_control.isChecked():
                 self.stepper.disable()
                 self.stepper_enabled = False
+            else:
+                self.stepper.enable()
+                self.stepper_enabled = True
 
             self.update_ui_state()
 
