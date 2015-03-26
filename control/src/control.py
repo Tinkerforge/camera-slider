@@ -56,13 +56,12 @@ TAB_CONNECTION = 0
 TAB_CALIBRATION = 1
 TAB_MOTION_CONTROL = 2
 TAB_CAMERA_CONTROL = 3
-TAB_ADVANCED_OPTIONS = 4
 
 CALIBRATION_VELOCITY = 2000
 CALIBRATION_ACCELERATION = 65535
 CALIBRATION_DECELERATION = 65535
 
-EMERGENCY_FULL_BREAK_DECELERATION = 65535
+FULL_BREAK_DECELERATION = 65535
 
 class SliderSpinSyncer(QObject):
     def __init__(self, parent, slider, spin, changed_callback):
@@ -114,7 +113,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.close_in_progress = False
         self.shutdown_in_progress = False
         self.disconnect_in_progress = False
-        self.emergency_full_break_in_progress = False
+        self.full_break_in_progress = False
         self.calibration_in_progress = False
         self.maximum_positions = {} # uid -> maximum_position
         self.temporary_minimum_position = None
@@ -149,6 +148,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # prepare calibration tab
         self.combo_stepper_uid.currentIndexChanged.connect(self.stepper_uid_changed)
         self.check_automatic_power_control.stateChanged.connect(self.automatic_power_control_changed)
+        self.line_limit_switches.setVisible(False) # FIXME
+        self.check_limit_switches.setVisible(False) # FIXME
         self.check_limit_switches.stateChanged.connect(lambda: self.update_ui_state())
         self.button_calibration_start.clicked.connect(self.calibration_start)
         self.button_calibration_abort.clicked.connect(self.calibration_abort)
@@ -160,22 +161,24 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.button_calibration_set_maximum.clicked.connect(self.calibration_set_maximum)
 
         # prepare motion control tab
-        self.velocity_syncer = SliderSpinSyncer(self, self.slider_velocity, self.spin_velocity, self.velocity_changed)
         self.current_position_syncer = SliderSpinSyncer(self, self.slider_current_position, self.spin_current_position, None)
         self.target_position_syncer = SliderSpinSyncer(self, self.slider_target_position, self.spin_target_position, self.target_position_changed)
+        self.velocity_syncer = SliderSpinSyncer(self, self.slider_velocity, self.spin_velocity, self.velocity_changed)
+        self.acceleration_syncer = SliderSpinSyncer(self, self.slider_acceleration, self.spin_acceleration, self.speed_ramping_changed)
+        self.deceleration_syncer = SliderSpinSyncer(self, self.slider_deceleration, self.spin_deceleration, self.speed_ramping_changed)
 
-        self.button_stop_motion.clicked.connect(self.stop_motion)
-        self.button_emergency_full_break.clicked.connect(self.emergency_full_break)
+        self.button_motion_stop.clicked.connect(self.motion_stop)
+        self.button_motion_forward.pressed.connect(self.motion_forward_pressed)
+        self.button_motion_forward.released.connect(self.motion_forward_released)
+        self.button_motion_backward.pressed.connect(self.motion_backward_pressed)
+        self.button_motion_backward.released.connect(self.motion_backward_released)
+        self.button_motion_full_break.clicked.connect(self.motion_full_break)
 
         self.current_position_timer = QTimer(self)
         self.current_position_timer.setInterval(50)
         self.current_position_timer.timeout.connect(self.update_current_position)
 
         # prepare camera control tab
-
-        # prepare advanced options tab
-        self.acceleration_syncer = SliderSpinSyncer(self, self.slider_acceleration, self.spin_acceleration, self.speed_ramping_changed)
-        self.deceleration_syncer = SliderSpinSyncer(self, self.slider_deceleration, self.spin_deceleration, self.speed_ramping_changed)
 
         self.clear_all_uids()
 
@@ -216,7 +219,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.tab_widget.setTabEnabled(TAB_CALIBRATION, connected)
         self.tab_widget.setTabEnabled(TAB_MOTION_CONTROL, connected and self.stepper_calibrated)
         self.tab_widget.setTabEnabled(TAB_CAMERA_CONTROL, connected and self.stepper_calibrated and False) # FIXME
-        self.tab_widget.setTabEnabled(TAB_ADVANCED_OPTIONS, connected)
 
         # connection tab
         self.button_connect.setEnabled(True)
@@ -239,9 +241,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         io4_uid = self.get_io4_uid()
         limit_switches = self.check_limit_switches.isChecked()
         automatic_power_control = self.check_automatic_power_control.isChecked()
+        forward_calibration_down = self.button_calibration_forward.isDown()
+        backward_calibration_down = self.button_calibration_backward.isDown()
 
         self.combo_stepper_uid.setEnabled(stepper_uid != None and not self.calibration_in_progress and not self.stepper_enabled)
-        self.check_automatic_power_control.setEnabled(not self.calibration_in_progress and not self.stepper_driving)
+        self.check_automatic_power_control.setEnabled(stepper_uid != None and not self.calibration_in_progress and not self.stepper_driving)
         self.check_limit_switches.setEnabled(not self.calibration_in_progress and False) # FIXME
         self.label_io4_uid_title.setVisible(limit_switches)
         self.combo_io4_uid.setVisible(limit_switches)
@@ -256,9 +260,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.label_calibration_help1.setVisible(stepper_uid != None)
         self.line_calibration_motion.setVisible(self.calibration_in_progress)
         self.button_calibration_forward.setVisible(self.calibration_in_progress)
-        self.button_calibration_forward.setEnabled(not self.button_calibration_backward.isDown())
+        self.button_calibration_forward.setEnabled((not self.stepper_driving or forward_calibration_down) and not backward_calibration_down)
         self.button_calibration_backward.setVisible(self.calibration_in_progress)
-        self.button_calibration_backward.setEnabled(not self.button_calibration_forward.isDown())
+        self.button_calibration_backward.setEnabled((not self.stepper_driving or backward_calibration_down) and not forward_calibration_down)
         self.button_calibration_set_minimum.setVisible(self.calibration_in_progress)
         self.button_calibration_set_minimum.setEnabled(not self.stepper_driving)
         self.button_calibration_set_maximum.setVisible(self.calibration_in_progress)
@@ -290,20 +294,24 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.button_calibration_set_maximum.setText('Set Maximum Again')
 
         # motion control tab
-        self.slider_velocity.setEnabled(not self.stepper_driving)
-        self.spin_velocity.setEnabled(not self.stepper_driving)
+        forward_motion_down = self.button_motion_forward.isDown()
+        backward_motion_down = self.button_motion_backward.isDown()
+        any_motion_down = forward_motion_down or backward_motion_down
+
         self.slider_target_position.setEnabled(not self.stepper_driving)
         self.spin_target_position.setEnabled(not self.stepper_driving)
-        self.button_stop_motion.setEnabled(self.stepper_driving)
-        self.button_emergency_full_break.setEnabled(self.stepper_driving)
-
-        # camera control tab
-
-        # advanced options tab
+        self.button_motion_forward.setEnabled((not self.stepper_driving or forward_motion_down) and not backward_motion_down)
+        self.button_motion_backward.setEnabled((not self.stepper_driving or backward_motion_down) and not forward_motion_down)
+        self.button_motion_stop.setEnabled(self.stepper_driving and not any_motion_down)
+        self.button_motion_full_break.setEnabled(self.stepper_driving and not any_motion_down)
+        self.slider_velocity.setEnabled(not self.stepper_driving)
+        self.spin_velocity.setEnabled(not self.stepper_driving)
         self.slider_acceleration.setEnabled(not self.stepper_driving)
         self.spin_acceleration.setEnabled(not self.stepper_driving)
         self.slider_deceleration.setEnabled(not self.stepper_driving)
         self.spin_deceleration.setEnabled(not self.stepper_driving)
+
+        # camera control tab
 
     def get_stepper_uid(self):
         index = self.combo_stepper_uid.currentIndex()
@@ -353,8 +361,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.stepper_driving = False
 
-        if self.emergency_full_break_in_progress:
-            self.emergency_full_break_in_progress = False
+        if self.full_break_in_progress:
+            self.full_break_in_progress = False
             self.speed_ramping_changed()
 
         self.update_ui_state()
@@ -391,7 +399,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self.stepper != None and self.stepper_enabled and not self.disconnect_in_progress:
             if ask_user:
                 if self.stepper_driving:
-                    message_text = 'The cart is still moving. Disconnecting now will result in an emergency full break.'
+                    message_text = 'The cart is still moving. Disconnecting now will result in an full break.'
                 else:
                     message_text = 'The stepper motor is still powered. Disconnecting now will disable the stepper motor power.'
 
@@ -407,7 +415,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
             if self.stepper_driving:
                 self.disconnect_in_progress = True
-                self.emergency_full_break()
+                self.motion_full_break()
                 return False
             else:
                 self.check_automatic_power_control.setChecked(True)
@@ -444,36 +452,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         uid = self.get_stepper_uid()
 
         if uid != None:
-            self.stepper_calibrated = uid in self.maximum_positions
-
-            if self.stepper_calibrated:
-                maximum_position = self.maximum_positions[uid]
-                self.stepper_reversed = maximum_position < 0
-                maximum_position = abs(maximum_position)
-
-                self.slider_current_position.setMaximum(maximum_position)
-                self.spin_current_position.setMaximum(maximum_position)
-                self.slider_target_position.setMaximum(maximum_position)
-                self.spin_target_position.setMaximum(maximum_position)
-
-                self.label_current_position_unit.setText('of {0}'.format(maximum_position))
-                self.label_target_position_unit.setText('of {0}'.format(maximum_position))
-
             self.stepper = BrickStepper(uid, self.ipcon)
             self.stepper.register_callback(BrickStepper.CALLBACK_POSITION_REACHED,
                                            self.qtcb_stepper_position_reached.emit)
             self.stepper.register_callback(BrickStepper.CALLBACK_NEW_STATE,
                                            self.qtcb_stepper_new_state.emit)
 
+            self.calibration_changed()
             self.velocity_changed()
             self.speed_ramping_changed()
-
-            if uid in self.maximum_positions:
-                current_position = self.stepper.get_current_position() # FIXME: blocking getter
-                self.slider_target_position.setValue(current_position)
-
-                self.update_current_position()
-                self.current_position_timer.start()
 
             if self.stepper.is_enabled():
                 self.check_automatic_power_control.setChecked(False)
@@ -511,7 +498,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.stepper.set_current_position(new_current_position)
 
             self.calibration_abort()
-            self.stepper_uid_changed()
+            self.calibration_changed()
 
         self.update_ui_state()
 
@@ -523,7 +510,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.temporary_minimum_position = None
         self.temporary_maximum_position = None
 
-        self.stop_motion()
+        self.motion_stop()
         self.velocity_changed()
         self.speed_ramping_changed()
         self.update_ui_state()
@@ -535,9 +522,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.prepare_stepper_motion()
             self.stepper.drive_forward()
 
+        self.update_ui_state()
+
     def calibration_forward_released(self):
         if self.stepper != None and self.calibration_in_progress:
             self.stepper.stop()
+
+        self.update_ui_state()
 
     def calibration_backward_pressed(self):
         if self.stepper != None and self.calibration_in_progress:
@@ -546,9 +537,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.prepare_stepper_motion()
             self.stepper.drive_backward()
 
+        self.update_ui_state()
+
     def calibration_backward_released(self):
         if self.stepper != None and self.calibration_in_progress:
             self.stepper.stop()
+
+        self.update_ui_state()
 
     def calibration_set_minimum(self):
         if self.stepper != None and self.calibration_in_progress and not self.stepper_driving:
@@ -560,9 +555,31 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.temporary_maximum_position = self.stepper.get_current_position()
             self.update_ui_state()
 
-    def velocity_changed(self):
-        if self.stepper != None and not self.calibration_in_progress and not self.stepper_driving:
-            self.stepper.set_max_velocity(self.slider_velocity.value())
+    def calibration_changed(self):
+        self.stepper_calibrated = False
+        self.stepper_reversed = False
+        uid = self.get_stepper_uid()
+
+        if uid != None:
+            self.stepper_calibrated = uid in self.maximum_positions
+
+            if self.stepper_calibrated:
+                maximum_position = self.maximum_positions[uid]
+                self.stepper_reversed = maximum_position < 0
+                maximum_position = abs(maximum_position)
+
+                self.slider_current_position.setMaximum(maximum_position)
+                self.spin_current_position.setMaximum(maximum_position)
+                self.label_current_position_unit.setText('of {0}'.format(maximum_position))
+                self.slider_target_position.setMaximum(maximum_position)
+                self.spin_target_position.setMaximum(maximum_position)
+                self.label_target_position_unit.setText('of {0}'.format(maximum_position))
+
+                current_position = self.stepper.get_current_position() # FIXME: blocking getter
+                self.slider_target_position.setValue(current_position)
+
+                self.update_current_position()
+                self.current_position_timer.start()
 
     def target_position_changed(self):
         if self.stepper != None and self.stepper_calibrated and not self.calibration_in_progress and not self.stepper_driving:
@@ -576,20 +593,72 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.prepare_stepper_motion()
                 self.stepper.set_target_position(target_position)
 
-    def stop_motion(self):
-        if self.stepper != None and not self.calibration_in_progress and not self.emergency_full_break_in_progress:
+        self.update_ui_state()
+
+    def motion_forward_pressed(self):
+        if self.stepper != None and self.stepper_calibrated and not self.calibration_in_progress and not self.stepper_driving:
+            uid = self.get_stepper_uid()
+
+            if uid != None:
+                current_position = self.stepper.get_current_position()
+
+                if self.stepper_reversed:
+                    target_position = 0
+                else:
+                    target_position = self.maximum_positions[uid]
+
+                if current_position != target_position:
+                    self.prepare_stepper_motion()
+                    self.stepper.set_target_position(target_position)
+
+        self.update_ui_state()
+
+    def motion_forward_released(self):
+        self.motion_stop()
+
+    def motion_backward_pressed(self):
+        if self.stepper != None and self.stepper_calibrated and not self.calibration_in_progress and not self.stepper_driving:
+            uid = self.get_stepper_uid()
+
+            if uid != None:
+                current_position = self.stepper.get_current_position()
+
+                if self.stepper_reversed:
+                    target_position = self.maximum_positions[uid]
+                else:
+                    target_position = 0
+
+                if current_position != target_position:
+                    self.prepare_stepper_motion()
+                    self.stepper.set_target_position(target_position)
+
+        self.update_ui_state()
+
+    def motion_backward_released(self):
+        self.motion_stop()
+
+    def motion_stop(self):
+        if self.stepper != None and not self.calibration_in_progress and not self.full_break_in_progress and self.stepper_driving:
             self.stepper.stop()
 
-    def emergency_full_break(self):
-        if self.stepper != None and not self.calibration_in_progress and not self.emergency_full_break_in_progress:
-            self.emergency_full_break_in_progress = True
+        self.update_ui_state()
+
+    def motion_full_break(self):
+        if self.stepper != None and not self.calibration_in_progress and not self.full_break_in_progress:
+            self.full_break_in_progress = True
             acceleration = self.slider_acceleration.value()
 
-            self.stepper.set_speed_ramping(acceleration, EMERGENCY_FULL_BREAK_DECELERATION)
+            self.stepper.set_speed_ramping(acceleration, FULL_BREAK_DECELERATION)
             self.stepper.stop()
 
+        self.update_ui_state()
+
+    def velocity_changed(self):
+        if self.stepper != None and not self.calibration_in_progress and not self.stepper_driving:
+            self.stepper.set_max_velocity(self.slider_velocity.value())
+
     def speed_ramping_changed(self):
-        if self.stepper != None and not self.calibration_in_progress and not self.emergency_full_break_in_progress and not self.stepper_driving:
+        if self.stepper != None and not self.calibration_in_progress and not self.full_break_in_progress and not self.stepper_driving:
             acceleration = self.slider_acceleration.value()
             deceleration = self.slider_deceleration.value()
 

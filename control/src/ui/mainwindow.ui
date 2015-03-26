@@ -111,7 +111,7 @@
            </widget>
           </item>
           <item row="3" column="0" colspan="5">
-           <widget class="Line" name="line_3">
+           <widget class="Line" name="line_limit_switches">
             <property name="orientation">
              <enum>Qt::Horizontal</enum>
             </property>
@@ -138,7 +138,7 @@
            </widget>
           </item>
           <item row="6" column="0" colspan="5">
-           <widget class="Line" name="line_5">
+           <widget class="Line" name="line_calibration">
             <property name="orientation">
              <enum>Qt::Horizontal</enum>
             </property>
@@ -257,21 +257,21 @@
        <layout class="QVBoxLayout" name="verticalLayout_4">
         <item>
          <layout class="QGridLayout" name="gridLayout_3">
-          <item row="1" column="0">
+          <item row="0" column="0">
            <widget class="QLabel" name="label_current_position_title">
             <property name="text">
              <string>Current Position:</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="0">
+          <item row="1" column="0">
            <widget class="QLabel" name="label_target_position_title">
             <property name="text">
              <string>Target Position:</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="2">
+          <item row="0" column="2">
            <layout class="QHBoxLayout" name="horizontalLayout_3">
             <item>
              <widget class="QLabel" name="label_4">
@@ -299,7 +299,7 @@
             </item>
            </layout>
           </item>
-          <item row="2" column="2">
+          <item row="1" column="2">
            <layout class="QHBoxLayout" name="horizontalLayout_4">
             <item>
              <widget class="QLabel" name="label_3">
@@ -324,38 +324,87 @@
             </item>
            </layout>
           </item>
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_velocity_title">
-            <property name="text">
-             <string>Velocity:</string>
+          <item row="0" column="1">
+           <widget class="QSlider" name="slider_current_position">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="maximum">
+             <number>65535</number>
+            </property>
+            <property name="singleStep">
+             <number>0</number>
+            </property>
+            <property name="pageStep">
+             <number>0</number>
+            </property>
+            <property name="tracking">
+             <bool>false</bool>
+            </property>
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
             </property>
            </widget>
           </item>
-          <item row="0" column="2">
-           <layout class="QHBoxLayout" name="horizontalLayout_5">
+          <item row="1" column="1">
+           <widget class="QSlider" name="slider_target_position">
+            <property name="maximum">
+             <number>65535</number>
+            </property>
+            <property name="singleStep">
+             <number>0</number>
+            </property>
+            <property name="pageStep">
+             <number>0</number>
+            </property>
+            <property name="tracking">
+             <bool>false</bool>
+            </property>
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1" colspan="2">
+           <layout class="QHBoxLayout" name="horizontalLayout_10">
             <item>
-             <widget class="QSpinBox" name="spin_velocity">
-              <property name="minimum">
-               <number>1</number>
-              </property>
-              <property name="maximum">
-               <number>65535</number>
-              </property>
-              <property name="value">
-               <number>10000</number>
+             <widget class="QPushButton" name="button_motion_forward">
+              <property name="text">
+               <string>Forward</string>
               </property>
              </widget>
             </item>
             <item>
-             <widget class="QLabel" name="label_velocity_unit">
+             <widget class="QPushButton" name="button_motion_backward">
               <property name="text">
-               <string>steps/s</string>
+               <string>Backward</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="button_motion_stop">
+              <property name="text">
+               <string>Stop</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="button_motion_full_break">
+              <property name="text">
+               <string>Full Break</string>
               </property>
              </widget>
             </item>
            </layout>
           </item>
-          <item row="0" column="1">
+          <item row="4" column="0" colspan="3">
+           <widget class="Line" name="line_6">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="1">
            <widget class="QSlider" name="slider_velocity">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -386,69 +435,159 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="1">
-           <widget class="QSlider" name="slider_current_position">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="maximum">
-             <number>65535</number>
-            </property>
-            <property name="singleStep">
-             <number>0</number>
-            </property>
-            <property name="pageStep">
-             <number>0</number>
-            </property>
-            <property name="tracking">
-             <bool>false</bool>
-            </property>
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="QSlider" name="slider_target_position">
-            <property name="maximum">
-             <number>65535</number>
-            </property>
-            <property name="singleStep">
-             <number>0</number>
-            </property>
-            <property name="pageStep">
-             <number>0</number>
-            </property>
-            <property name="tracking">
-             <bool>false</bool>
-            </property>
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="1" colspan="2">
-           <layout class="QHBoxLayout" name="horizontalLayout_10">
+          <item row="5" column="2">
+           <layout class="QHBoxLayout" name="horizontalLayout_5">
             <item>
-             <widget class="QPushButton" name="button_stop_motion">
-              <property name="text">
-               <string>Stop Motion</string>
+             <widget class="QSpinBox" name="spin_velocity">
+              <property name="minimum">
+               <number>1</number>
+              </property>
+              <property name="maximum">
+               <number>65535</number>
+              </property>
+              <property name="value">
+               <number>10000</number>
               </property>
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="button_emergency_full_break">
+             <widget class="QLabel" name="label_velocity_unit">
               <property name="text">
-               <string>Emergency Full Break</string>
+               <string>steps/s</string>
               </property>
              </widget>
             </item>
            </layout>
           </item>
-          <item row="3" column="0" colspan="3">
-           <widget class="Line" name="line_6">
+          <item row="5" column="0">
+           <widget class="QLabel" name="label_velocity_title">
+            <property name="text">
+             <string>Velocity:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="0">
+           <widget class="QLabel" name="label_acceleration_title">
+            <property name="text">
+             <string>Acceleration:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="0">
+           <widget class="QLabel" name="label_deceleration_title">
+            <property name="text">
+             <string>Deceleration:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="1">
+           <widget class="QSlider" name="slider_acceleration">
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>65535</number>
+            </property>
+            <property name="singleStep">
+             <number>0</number>
+            </property>
+            <property name="pageStep">
+             <number>0</number>
+            </property>
+            <property name="value">
+             <number>65535</number>
+            </property>
+            <property name="sliderPosition">
+             <number>65535</number>
+            </property>
+            <property name="tracking">
+             <bool>false</bool>
+            </property>
             <property name="orientation">
              <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="1">
+           <widget class="QSlider" name="slider_deceleration">
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>65535</number>
+            </property>
+            <property name="singleStep">
+             <number>0</number>
+            </property>
+            <property name="pageStep">
+             <number>0</number>
+            </property>
+            <property name="value">
+             <number>65535</number>
+            </property>
+            <property name="tracking">
+             <bool>false</bool>
+            </property>
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="2">
+           <layout class="QHBoxLayout" name="horizontalLayout">
+            <item>
+             <widget class="QSpinBox" name="spin_acceleration">
+              <property name="minimum">
+               <number>1</number>
+              </property>
+              <property name="maximum">
+               <number>65535</number>
+              </property>
+              <property name="value">
+               <number>65535</number>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_acceleration_unit">
+              <property name="text">
+               <string>steps/s²</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="7" column="2">
+           <layout class="QHBoxLayout" name="horizontalLayout_2">
+            <item>
+             <widget class="QSpinBox" name="spin_deceleration">
+              <property name="minimum">
+               <number>1</number>
+              </property>
+              <property name="maximum">
+               <number>65535</number>
+              </property>
+              <property name="value">
+               <number>65535</number>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_deceleration_unit">
+              <property name="text">
+               <string>steps/s²</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="3" column="1" colspan="2">
+           <widget class="QLabel" name="label_motion_help">
+            <property name="text">
+             <string>Drag and drop the &lt;b&gt;Target Position&lt;/b&gt; slider to move the cart to a new position. Or press and hold the &lt;b&gt;Forward&lt;/b&gt; or &lt;b&gt;Backward&lt;/b&gt; button to move the cart. It stops when the button is released. Click the &lt;b&gt;Stop&lt;/b&gt; or &lt;b&gt;Full Break&lt;/b&gt; button to stop the cart while it is moving.</string>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
             </property>
            </widget>
           </item>
@@ -479,145 +618,6 @@
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="tab_advanced_options">
-       <attribute name="title">
-        <string>Advanced Options</string>
-       </attribute>
-       <layout class="QVBoxLayout" name="verticalLayout_6">
-        <item>
-         <layout class="QGridLayout" name="gridLayout_5">
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_acceleration_title">
-            <property name="text">
-             <string>Acceleration:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="label_deceleration_title">
-            <property name="text">
-             <string>Deceleration:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="2">
-           <layout class="QHBoxLayout" name="horizontalLayout">
-            <item>
-             <widget class="QSpinBox" name="spin_acceleration">
-              <property name="minimum">
-               <number>1</number>
-              </property>
-              <property name="maximum">
-               <number>65535</number>
-              </property>
-              <property name="value">
-               <number>65535</number>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLabel" name="label_acceleration_unit">
-              <property name="text">
-               <string>steps/s²</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item row="1" column="2">
-           <layout class="QHBoxLayout" name="horizontalLayout_2">
-            <item>
-             <widget class="QSpinBox" name="spin_deceleration">
-              <property name="minimum">
-               <number>1</number>
-              </property>
-              <property name="maximum">
-               <number>65535</number>
-              </property>
-              <property name="value">
-               <number>65535</number>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLabel" name="label_deceleration_unit">
-              <property name="text">
-               <string>steps/s²</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item row="0" column="1">
-           <widget class="QSlider" name="slider_acceleration">
-            <property name="minimum">
-             <number>1</number>
-            </property>
-            <property name="maximum">
-             <number>65535</number>
-            </property>
-            <property name="singleStep">
-             <number>0</number>
-            </property>
-            <property name="pageStep">
-             <number>0</number>
-            </property>
-            <property name="value">
-             <number>65535</number>
-            </property>
-            <property name="sliderPosition">
-             <number>65535</number>
-            </property>
-            <property name="tracking">
-             <bool>false</bool>
-            </property>
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QSlider" name="slider_deceleration">
-            <property name="minimum">
-             <number>1</number>
-            </property>
-            <property name="maximum">
-             <number>65535</number>
-            </property>
-            <property name="singleStep">
-             <number>0</number>
-            </property>
-            <property name="pageStep">
-             <number>0</number>
-            </property>
-            <property name="value">
-             <number>65535</number>
-            </property>
-            <property name="tracking">
-             <bool>false</bool>
-            </property>
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item>
-         <spacer name="verticalSpacer_2">
-          <property name="orientation">
-           <enum>Qt::Vertical</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>20</width>
-            <height>40</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-       </layout>
-      </widget>
      </widget>
     </item>
    </layout>
@@ -638,14 +638,16 @@
   <tabstop>button_calibration_backward</tabstop>
   <tabstop>button_calibration_set_minimum</tabstop>
   <tabstop>button_calibration_set_maximum</tabstop>
-  <tabstop>slider_velocity</tabstop>
-  <tabstop>spin_velocity</tabstop>
   <tabstop>slider_current_position</tabstop>
   <tabstop>spin_current_position</tabstop>
   <tabstop>slider_target_position</tabstop>
   <tabstop>spin_target_position</tabstop>
-  <tabstop>button_stop_motion</tabstop>
-  <tabstop>button_emergency_full_break</tabstop>
+  <tabstop>button_motion_forward</tabstop>
+  <tabstop>button_motion_backward</tabstop>
+  <tabstop>button_motion_stop</tabstop>
+  <tabstop>button_motion_full_break</tabstop>
+  <tabstop>slider_velocity</tabstop>
+  <tabstop>spin_velocity</tabstop>
   <tabstop>slider_acceleration</tabstop>
   <tabstop>spin_acceleration</tabstop>
   <tabstop>slider_deceleration</tabstop>
