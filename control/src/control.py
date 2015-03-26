@@ -111,6 +111,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.disconnect_times = []
         self.devices = {} # uid -> (connected_uid, device_identifier)
+        self.close_in_progress = False
+        self.shutdown_in_progress = False
+        self.disconnect_in_progress = False
         self.emergency_full_break_in_progress = False
         self.calibration_in_progress = False
         self.maximum_positions = {} # uid -> maximum_position
@@ -178,12 +181,27 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     # override QMainWindow.closeEvent
     def closeEvent(self, event):
-        self.disconnect()
+        if not self.close_in_progress:
+            self.close_in_progress = True
+
+            if not self.disconnect(True):
+                event.ignore()
+                return
+        else:
+            self.close_in_progress = False
+
+        QMainWindow.closeEvent(self, event)
 
     def shutdown(self, signal, frame):
-        self.disconnect()
-
         print('Received SIGINT or SIGTERM, shutting down')
+
+        if not self.shutdown_in_progress:
+            self.shutdown_in_progress = True
+
+            if not self.disconnect(False):
+                return
+        else:
+            self.shutdown_in_progress = False
 
         sys.exit()
 
@@ -341,6 +359,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.update_ui_state()
 
+        if self.disconnect_in_progress:
+            self.disconnect(False)
+
     def update_current_position(self):
         if self.stepper != None and self.stepper_calibrated and not self.calibration_in_progress:
             current_position = abs(self.stepper.get_current_position())
@@ -362,24 +383,55 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.button_connect.setText('Connect')
 
                 QMessageBox.critical(self, 'Connection',
-                                     'Could not connect. Please check host, check ' +
-                                     'port and ensure that Brick Daemon is running.')
+                                     'Could not connect. Please check host, check port and ensure that Brick Daemon is running.')
         else:
-            self.disconnect()
+            self.disconnect(True)
 
-    def disconnect(self):
-        # FIXME: if stepper is still moving ask user about exiting, then stop and disable stepper
+    def disconnect(self, ask_user):
+        if self.stepper != None and self.stepper_enabled and not self.disconnect_in_progress:
+            if ask_user:
+                if self.stepper_driving:
+                    message_text = 'The cart is still moving. Disconnecting now will result in an emergency full break.'
+                else:
+                    message_text = 'The stepper motor is still powered. Disconnecting now will disable the stepper motor power.'
+
+                message_box = QMessageBox(QMessageBox.Question, 'Connection', message_text, QMessageBox.NoButton, self)
+                disconnect_button = message_box.addButton('Disconnect', QMessageBox.AcceptRole)
+                message_box.addButton(QMessageBox.Cancel)
+                message_box.exec_()
+
+                if message_box.clickedButton() != disconnect_button:
+                    self.close_in_progress = False
+                    self.shutdown_in_progress = False
+                    return False
+
+            if self.stepper_driving:
+                self.disconnect_in_progress = True
+                self.emergency_full_break()
+                return False
+            else:
+                self.check_automatic_power_control.setChecked(True)
 
         self.calibration_abort()
+        self.clear_all_uids()
 
         try:
             self.ipcon.disconnect()
         except:
             pass
 
-        self.clear_all_uids()
+        if self.disconnect_in_progress:
+            self.disconnect_in_progress = False
+
+            if self.close_in_progress:
+                self.close()
+            elif self.shutdown_in_progress:
+                sys.exit()
+
+        return True
 
     def stepper_uid_changed(self):
+        self.check_automatic_power_control.setChecked(True)
         self.current_position_timer.stop()
 
         if self.stepper != None:
@@ -388,6 +440,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.stepper = None
         self.stepper_calibrated = False
+        self.stepper_reversed = False
         uid = self.get_stepper_uid()
 
         if uid != None:
@@ -421,6 +474,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
                 self.update_current_position()
                 self.current_position_timer.start()
+
+            if self.stepper.is_enabled():
+                self.check_automatic_power_control.setChecked(False)
 
         self.update_ui_state()
 
