@@ -31,8 +31,8 @@ import sys
 import time
 import signal
 
-from PyQt4.QtCore import pyqtSignal, QObject, QTimer
-from PyQt4.QtGui import QApplication, QMainWindow, QIcon, QMessageBox
+from PyQt4.QtCore import pyqtSignal, Qt, QObject, QTimer, QEvent
+from PyQt4.QtGui import QApplication, QMainWindow, QIcon, QMessageBox, QStyle, QStyleOptionSlider, QSlider
 
 from tinkerforge.ip_connection import IPConnection
 from tinkerforge.brick_stepper import BrickStepper
@@ -167,6 +167,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.acceleration_syncer = SliderSpinSyncer(self, self.slider_acceleration, self.spin_acceleration, self.speed_ramping_changed)
         self.deceleration_syncer = SliderSpinSyncer(self, self.slider_deceleration, self.spin_deceleration, self.speed_ramping_changed)
 
+        self.slider_target_position.installEventFilter(self)
+        self.slider_velocity.installEventFilter(self)
+        self.slider_acceleration.installEventFilter(self)
+        self.slider_deceleration.installEventFilter(self)
+
         self.button_motion_stop.clicked.connect(self.motion_stop)
         self.button_motion_forward.pressed.connect(self.motion_forward_pressed)
         self.button_motion_forward.released.connect(self.motion_forward_released)
@@ -194,6 +199,42 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.close_in_progress = False
 
         QMainWindow.closeEvent(self, event)
+
+    # override QMainWindow.eventFilter
+    def eventFilter(self, obj, event):
+        if isinstance(obj, QSlider):
+            if event.type() == QEvent.MouseButtonPress:
+                option = QStyleOptionSlider()
+                obj.initStyleOption(option)
+                groove = obj.style().subControlRect(QStyle.CC_Slider, option, QStyle.SC_SliderGroove, obj)
+                handle = obj.style().subControlRect(QStyle.CC_Slider, option, QStyle.SC_SliderHandle, obj)
+
+                if event.button() == Qt.LeftButton and not handle.contains(event.pos()):
+                    minimum = obj.minimum()
+                    maximum = obj.maximum()
+                    offset = handle.center() - handle.topLeft()
+
+                    if self.slider_target_position.orientation() == Qt.Horizontal:
+                        position = event.x() - offset.x()
+                        groove_minimum = groove.x()
+                        groove_maximum = groove.right() - handle.width() + 1
+                    else:
+                        position = event.y() - offset.y()
+                        groove_minimum = groove.y()
+                        groove_maximum = groove.bottom() - handle.height() + 1
+
+                    obj.setSliderPosition(QStyle.sliderValueFromPosition(obj.minimum(), obj.maximum(),
+                                          position - groove_minimum, groove_maximum - groove_minimum, option.upsideDown))
+                    obj.triggerAction(QSlider.SliderMove)
+                    obj.setRepeatAction(QSlider.SliderNoAction)
+
+                    return True
+                else:
+                    return False
+            else:
+                return False
+        else:
+            return QMainWindow.eventFilter(self, obj, event)
 
     def shutdown(self, signal, frame):
         print('Received SIGINT or SIGTERM, shutting down')
