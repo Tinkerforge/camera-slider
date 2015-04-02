@@ -618,6 +618,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.label_target_position_unit.setText('of {0}'.format(maximum_position))
 
                 current_position = self.stepper.get_current_position() # FIXME: blocking getter
+
+                if self.stepper_reversed:
+                    current_position = -current_position
+
                 self.slider_target_position.setValue(current_position)
 
                 self.update_current_position()
