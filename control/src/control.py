@@ -96,7 +96,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     qtcb_ipcon_enumerate = pyqtSignal(str, str, 'char', type((0,)), type((0,)), int, int)
     qtcb_ipcon_connected = pyqtSignal(int)
     qtcb_ipcon_disconnected = pyqtSignal(int)
-    qtcb_stepper_position_reached = pyqtSignal(int)
     qtcb_stepper_new_state = pyqtSignal(int, int)
 
     def __init__(self, parent=None):
@@ -128,7 +127,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.qtcb_ipcon_enumerate.connect(self.cb_ipcon_enumerate)
         self.qtcb_ipcon_connected.connect(self.cb_ipcon_connected)
         self.qtcb_ipcon_disconnected.connect(self.cb_ipcon_disconnected)
-        self.qtcb_stepper_position_reached.connect(self.cb_stepper_position_reached)
         self.qtcb_stepper_new_state.connect(self.cb_stepper_new_state)
 
         self.tab_widget.currentChanged.connect(lambda: self.update_ui_state())
@@ -396,11 +394,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if not self.stepper_driving:
             return
 
+        self.stepper_driving = False
+
         if self.stepper != None and self.check_automatic_power_control.isChecked():
             self.stepper.disable()
             self.stepper_enabled = False
-
-        self.stepper_driving = False
 
         if self.full_break_in_progress:
             self.full_break_in_progress = False
@@ -416,8 +414,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             current_position = abs(self.stepper.get_current_position())
             self.slider_current_position.setValue(current_position)
 
-            if current_position == self.slider_target_position.value():
-                self.stepper_motion_stopped()
 
     def connect_or_disconnect(self):
         connection_state = self.ipcon.get_connection_state()
@@ -494,8 +490,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         if uid != None:
             self.stepper = BrickStepper(uid, self.ipcon)
-            self.stepper.register_callback(BrickStepper.CALLBACK_POSITION_REACHED,
-                                           self.qtcb_stepper_position_reached.emit)
             self.stepper.register_callback(BrickStepper.CALLBACK_NEW_STATE,
                                            self.qtcb_stepper_new_state.emit)
 
@@ -804,12 +798,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.disconnect_times.append(time.time())
             self.update_ui_state(IPConnection.CONNECTION_STATE_PENDING)
 
-    def cb_stepper_position_reached(self, position):
-        if self.stepper != None:
-            self.stepper_motion_stopped()
-
     def cb_stepper_new_state(self, state_new, state_previous):
-        if self.stepper != None and state_new == BrickStepper.STATE_STOP:
+        if self.stepper != None and state_new == BrickStepper.STATE_STOP and state_previous != BrickStepper.STATE_STOP:
             self.stepper_motion_stopped()
 
 class Application(QApplication):
