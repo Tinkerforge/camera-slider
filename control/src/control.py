@@ -99,7 +99,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     qtcb_stepper_new_state = pyqtSignal(int, int)
 
     def __init__(self, parent=None):
-        super(QMainWindow, self).__init__(parent)
+        QMainWindow.__init__(self, parent)
 
         self.setupUi(self)
         self.setWindowTitle('Starter Kit: Camera Slider Control ' + CONTROL_VERSION)
@@ -201,6 +201,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     # override QMainWindow.eventFilter
     def eventFilter(self, obj, event):
         if isinstance(obj, QSlider):
+            # logic copied from QSlider::mousePressEvent
             if event.type() == QEvent.MouseButtonPress:
                 option = QStyleOptionSlider()
                 obj.initStyleOption(option)
@@ -379,6 +380,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.update_ui_state()
 
+    def stepper_ready_for_motion(self, ignore_time_lapse_in_progress=False):
+        return self.stepper != None and \
+               self.stepper_calibrated and \
+               not self.stepper_driving and \
+               not self.calibration_in_progress and \
+               not self.full_break_in_progress and \
+               (ignore_time_lapse_in_progress or not self.time_lapse_in_progress)
+
     def prepare_stepper_motion(self):
         if self.stepper_driving:
             return
@@ -538,17 +547,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.update_ui_state()
 
     def calibration_abort(self):
-        if not self.calibration_in_progress:
-            return
+        if self.calibration_in_progress:
+            self.calibration_in_progress = False
+            self.temporary_minimum_position = None
+            self.temporary_maximum_position = None
 
-        self.calibration_in_progress = False
-        self.temporary_minimum_position = None
-        self.temporary_maximum_position = None
-
-        self.motion_stop()
-        self.velocity_changed()
-        self.speed_ramping_changed()
-        self.update_ui_state()
+            self.motion_stop()
+            self.velocity_changed()
+            self.speed_ramping_changed()
+            self.update_ui_state()
 
     def calibration_forward_pressed(self):
         if self.stepper != None and self.calibration_in_progress:
@@ -617,7 +624,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.current_position_timer.start()
 
     def target_position_changed(self):
-        if self.stepper != None and self.stepper_calibrated and not self.calibration_in_progress and not self.stepper_driving:
+        if self.stepper_ready_for_motion():
             current_position = self.stepper.get_current_position()
             target_position = self.slider_target_position.value()
 
@@ -631,7 +638,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.update_ui_state()
 
     def motion_forward_pressed(self):
-        if self.stepper != None and self.stepper_calibrated and not self.calibration_in_progress and not self.stepper_driving:
+        if self.stepper_ready_for_motion():
             uid = self.get_stepper_uid()
 
             if uid != None:
@@ -652,7 +659,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.motion_stop()
 
     def motion_backward_pressed(self):
-        if self.stepper != None and self.stepper_calibrated and not self.calibration_in_progress and not self.stepper_driving:
+        if self.stepper_ready_for_motion():
             uid = self.get_stepper_uid()
 
             if uid != None:
@@ -673,13 +680,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.motion_stop()
 
     def motion_stop(self):
-        if self.stepper != None and not self.calibration_in_progress and not self.full_break_in_progress and self.stepper_driving:
+        if self.stepper != None and self.stepper_driving:
             self.stepper.stop()
 
         self.update_ui_state()
 
     def motion_full_break(self):
-        if self.stepper != None and not self.calibration_in_progress and not self.full_break_in_progress:
+        if self.stepper != None and not self.full_break_in_progress:
             self.full_break_in_progress = True
             acceleration = self.slider_acceleration.value()
 
@@ -689,11 +696,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.update_ui_state()
 
     def velocity_changed(self):
-        if self.stepper != None and not self.calibration_in_progress and not self.stepper_driving:
+        if self.stepper_ready_for_motion():
             self.stepper.set_max_velocity(self.slider_velocity.value())
 
     def speed_ramping_changed(self):
-        if self.stepper != None and not self.calibration_in_progress and not self.full_break_in_progress and not self.stepper_driving:
+        if self.stepper_ready_for_motion():
             acceleration = self.slider_acceleration.value()
             deceleration = self.slider_deceleration.value()
 
