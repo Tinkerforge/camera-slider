@@ -64,6 +64,8 @@ CALIBRATION_DECELERATION = 65535
 
 FULL_BREAK_DECELERATION = 65535
 
+ENABLE_DECAY_CONTROL = False
+
 class SliderSpinSyncer(QObject):
     def __init__(self, parent, slider, spin, changed_callback):
         QObject.__init__(self, parent)
@@ -200,6 +202,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.current_position_timer = QTimer(self)
         self.current_position_timer.setInterval(50)
         self.current_position_timer.timeout.connect(self.update_current_position)
+
+        self.label_decay_title.setVisible(ENABLE_DECAY_CONTROL)
+        self.slider_decay.setVisible(ENABLE_DECAY_CONTROL)
+        self.spin_decay.setVisible(ENABLE_DECAY_CONTROL)
 
         # prepare time lapse tab
         self.start_position_syncer = SliderSpinSyncer(self, self.slider_start_position, self.spin_start_position, None)
@@ -383,6 +389,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.spin_acceleration.setEnabled(not self.stepper_driving and not self.time_lapse_in_progress)
         self.slider_deceleration.setEnabled(not self.stepper_driving and not self.time_lapse_in_progress)
         self.spin_deceleration.setEnabled(not self.stepper_driving and not self.time_lapse_in_progress)
+        self.slider_decay.setEnabled(not self.stepper_driving and not self.time_lapse_in_progress)
+        self.spin_decay.setEnabled(not self.stepper_driving and not self.time_lapse_in_progress)
 
         # time lapse tab
         self.edit_camera_trigger.setEnabled(not self.time_lapse_in_progress)
@@ -558,12 +566,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.stepper.register_callback(BrickStepper.CALLBACK_NEW_STATE,
                                            self.qtcb_stepper_new_state.emit)
 
-            self.stepper.set_sync_rect(True) # FIXME
+            self.stepper.set_sync_rect(ENABLE_DECAY_CONTROL)
             self.stepper.set_motor_current(1200) # FIXME
 
             self.calibration_changed()
             self.velocity_changed()
             self.speed_ramping_changed()
+            self.decay_changed()
 
             if self.stepper.is_enabled():
                 self.check_automatic_power_control.setChecked(False)
@@ -792,7 +801,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.stepper.set_speed_ramping(acceleration, deceleration)
 
     def decay_changed(self):
-        if self.stepper_ready_for_motion():
+        if self.stepper_ready_for_motion() and ENABLE_DECAY_CONTROL:
             self.stepper.set_decay(self.slider_decay.value())
 
     ### time lapse tab ####################################################
