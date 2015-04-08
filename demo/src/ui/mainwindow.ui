@@ -18,7 +18,7 @@
     <item>
      <widget class="QTabWidget" name="tab_widget">
       <property name="currentIndex">
-       <number>0</number>
+       <number>3</number>
       </property>
       <widget class="QWidget" name="tab_connection">
        <attribute name="title">
@@ -588,6 +588,42 @@
             </property>
             <property name="wordWrap">
              <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="8" column="1">
+           <widget class="QSlider" name="slider_decay">
+            <property name="maximum">
+             <number>65535</number>
+            </property>
+            <property name="singleStep">
+             <number>0</number>
+            </property>
+            <property name="pageStep">
+             <number>0</number>
+            </property>
+            <property name="value">
+             <number>10000</number>
+            </property>
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item row="8" column="2">
+           <widget class="QSpinBox" name="spin_decay">
+            <property name="maximum">
+             <number>65535</number>
+            </property>
+            <property name="value">
+             <number>10000</number>
+            </property>
+           </widget>
+          </item>
+          <item row="8" column="0">
+           <widget class="QLabel" name="label_decay_title">
+            <property name="text">
+             <string>Decay:</string>
             </property>
            </widget>
           </item>

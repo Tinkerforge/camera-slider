@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Starter Kit: Camera Slider Control
+Starter Kit: Camera Slider Demo
 Copyright (C) 2015 Matthias Bolte <matthias@tinkerforge.com>
 
-control.py: Control GUI for Starter Kit: Camera Slider
+demo.py: Demo for Starter Kit: Camera Slider
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -41,7 +41,7 @@ from tinkerforge.bricklet_io4 import BrickletIO4
 
 from ui_mainwindow import Ui_MainWindow
 
-CONTROL_VERSION = '1.0.0'
+DEMO_VERSION = '1.0.0'
 
 NO_STEPPER_BRICK_FOUND = 'No Stepper Brick found'
 NO_IO4_BRICKLET_FOUND = 'No IO-4 Bricklet found'
@@ -103,7 +103,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         QMainWindow.__init__(self, parent)
 
         self.setupUi(self)
-        self.setWindowTitle('Starter Kit: Camera Slider Control ' + CONTROL_VERSION)
+        self.setWindowTitle('Starter Kit: Camera Slider Demo ' + DEMO_VERSION)
 
         signal.signal(signal.SIGINT, self.shutdown)
         signal.signal(signal.SIGTERM, self.shutdown)
@@ -183,6 +183,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.velocity_syncer = SliderSpinSyncer(self, self.slider_velocity, self.spin_velocity, self.velocity_changed)
         self.acceleration_syncer = SliderSpinSyncer(self, self.slider_acceleration, self.spin_acceleration, self.speed_ramping_changed)
         self.deceleration_syncer = SliderSpinSyncer(self, self.slider_deceleration, self.spin_deceleration, self.speed_ramping_changed)
+        self.decay_syncer = SliderSpinSyncer(self, self.slider_decay, self.spin_decay, self.decay_changed)
 
         self.slider_target_position.installEventFilter(self)
         self.slider_velocity.installEventFilter(self)
@@ -431,6 +432,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         return self.stepper != None and \
                self.stepper_calibrated and \
                not self.stepper_driving and \
+               not self.disconnect_in_progress and \
                not self.calibration_in_progress and \
                not self.full_break_in_progress and \
                (ignore_time_lapse_in_progress or not self.time_lapse_in_progress)
@@ -555,6 +557,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.stepper = BrickStepper(uid, self.ipcon)
             self.stepper.register_callback(BrickStepper.CALLBACK_NEW_STATE,
                                            self.qtcb_stepper_new_state.emit)
+
+            self.stepper.set_sync_rect(True) # FIXME
+            self.stepper.set_motor_current(1200) # FIXME
 
             self.calibration_changed()
             self.velocity_changed()
@@ -785,6 +790,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             deceleration = self.slider_deceleration.value()
 
             self.stepper.set_speed_ramping(acceleration, deceleration)
+
+    def decay_changed(self):
+        if self.stepper_ready_for_motion():
+            self.stepper.set_decay(self.slider_decay.value())
 
     ### time lapse tab ####################################################
 
@@ -1059,7 +1068,7 @@ class Application(QApplication):
     def __init__(self, args):
         super(QApplication, self).__init__(args)
 
-        self.setWindowIcon(QIcon(os.path.join(get_resources_path(), 'control-icon.png')))
+        self.setWindowIcon(QIcon(os.path.join(get_resources_path(), 'demo-icon.png')))
 
 def get_program_path():
     # from http://www.py2exe.org/index.cgi/WhereAmI
