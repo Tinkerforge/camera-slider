@@ -222,14 +222,14 @@
           <item row="7" column="1" colspan="2">
            <widget class="QPushButton" name="button_calibration_start">
             <property name="text">
-             <string>Start Calibration</string>
+             <string>Start</string>
             </property>
            </widget>
           </item>
           <item row="7" column="3" colspan="2">
            <widget class="QPushButton" name="button_calibration_abort">
             <property name="text">
-             <string>Abort Calibration</string>
+             <string>Abort</string>
             </property>
            </widget>
           </item>
@@ -250,9 +250,9 @@
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="tab_motion_control">
+      <widget class="QWidget" name="tab_motion">
        <attribute name="title">
-        <string>Motion Control</string>
+        <string>Motion</string>
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_4">
         <item>
@@ -274,7 +274,7 @@
           <item row="0" column="2">
            <layout class="QHBoxLayout" name="horizontalLayout_3">
             <item>
-             <widget class="QLabel" name="label_4">
+             <widget class="QLabel" name="label_current_position_unit_helper">
               <property name="text">
                <string>step</string>
               </property>
@@ -302,7 +302,7 @@
           <item row="1" column="2">
            <layout class="QHBoxLayout" name="horizontalLayout_4">
             <item>
-             <widget class="QLabel" name="label_3">
+             <widget class="QLabel" name="label_target_position_unit_helper">
               <property name="text">
                <string>step</string>
               </property>
@@ -608,13 +608,253 @@
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="tab_camera_control">
+      <widget class="QWidget" name="tab_time_lapse">
        <attribute name="title">
-        <string>Camera Control</string>
+        <string>Time Lapse</string>
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_5">
         <item>
-         <layout class="QGridLayout" name="gridLayout_4"/>
+         <layout class="QGridLayout" name="gridLayout_4">
+          <item row="4" column="0">
+           <widget class="QLabel" name="label_interval_title">
+            <property name="text">
+             <string>Interval:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_camera_trigger_title">
+            <property name="text">
+             <string>Camera Trigger:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="0">
+           <widget class="QLabel" name="label_start_position_title">
+            <property name="text">
+             <string>Start Position:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="0">
+           <widget class="QLabel" name="label_end_position_title">
+            <property name="text">
+             <string>End Position:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1" colspan="3">
+           <widget class="QLineEdit" name="edit_camera_trigger">
+            <property name="text">
+             <string>gphoto2 --capture-image</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1" colspan="3">
+           <widget class="QSpinBox" name="spin_interval">
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>1000000</number>
+            </property>
+            <property name="value">
+             <number>3</number>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="4">
+           <widget class="QLabel" name="label_interval_unit">
+            <property name="text">
+             <string>seconds</string>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="4">
+           <widget class="QLabel" name="label_start_position_unit">
+            <property name="text">
+             <string>of X</string>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="4">
+           <widget class="QLabel" name="label_end_position_unit">
+            <property name="text">
+             <string>of X</string>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="1">
+           <widget class="QSlider" name="slider_start_position">
+            <property name="maximum">
+             <number>65535</number>
+            </property>
+            <property name="singleStep">
+             <number>0</number>
+            </property>
+            <property name="pageStep">
+             <number>0</number>
+            </property>
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="1">
+           <widget class="QSlider" name="slider_end_position">
+            <property name="maximum">
+             <number>65535</number>
+            </property>
+            <property name="singleStep">
+             <number>0</number>
+            </property>
+            <property name="pageStep">
+             <number>0</number>
+            </property>
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="3">
+           <widget class="QSpinBox" name="spin_start_position">
+            <property name="maximum">
+             <number>65535</number>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="3">
+           <widget class="QSpinBox" name="spin_end_position">
+            <property name="maximum">
+             <number>65535</number>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="2">
+           <widget class="QLabel" name="label_start_position_unit_helper">
+            <property name="text">
+             <string>step</string>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="2">
+           <widget class="QLabel" name="label_end_position_unit_helper">
+            <property name="text">
+             <string>step</string>
+            </property>
+           </widget>
+          </item>
+          <item row="9" column="1" colspan="4">
+           <layout class="QHBoxLayout" name="horizontalLayout_6">
+            <item>
+             <widget class="QPushButton" name="button_time_lapse_prepare">
+              <property name="text">
+               <string>Prepare</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="button_time_lapse_start">
+              <property name="text">
+               <string>Start</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="button_time_lapse_abort">
+              <property name="text">
+               <string>Abort</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="8" column="0" colspan="5">
+           <widget class="Line" name="line">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item row="10" column="1" colspan="4">
+           <widget class="QLabel" name="label_time_lapse_status">
+            <property name="text">
+             <string>&lt;time-lapse-status&gt;</string>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0" colspan="5">
+           <widget class="Line" name="line_2">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="label_initial_delay_title">
+            <property name="text">
+             <string>Initial Delay:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1" colspan="3">
+           <widget class="QSpinBox" name="spin_initial_delay">
+            <property name="maximum">
+             <number>1000000</number>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="0" colspan="5">
+           <widget class="Line" name="line_3">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_image_count">
+            <property name="text">
+             <string>Image Count:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1" colspan="3">
+           <widget class="QSpinBox" name="spin_image_count">
+            <property name="minimum">
+             <number>2</number>
+            </property>
+            <property name="maximum">
+             <number>1000000</number>
+            </property>
+            <property name="value">
+             <number>5</number>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="4">
+           <widget class="QLabel" name="label_initial_delay_unit">
+            <property name="text">
+             <string>seconds</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <spacer name="verticalSpacer_2">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>0</height>
+           </size>
+          </property>
+         </spacer>
         </item>
        </layout>
       </widget>
