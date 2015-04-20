@@ -4,7 +4,7 @@
 Starter Kit: Camera Slider Demo
 Copyright (C) 2015 Matthias Bolte <matthias@tinkerforge.com>
 
-demo.py: Demo for Starter Kit: Camera Slider
+main.py: Demo for Starter Kit: Camera Slider
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -28,6 +28,32 @@ sip.setapi('QVariant', 2)
 
 import os
 import sys
+
+def prepare_package(package_name):
+    # from http://www.py2exe.org/index.cgi/WhereAmI
+    if hasattr(sys, 'frozen'):
+        program_path = os.path.dirname(os.path.realpath(unicode(sys.executable, sys.getfilesystemencoding())))
+    else:
+        program_path = os.path.dirname(os.path.realpath(unicode(__file__, sys.getfilesystemencoding())))
+
+    # add program_path so OpenGL is properly imported
+    sys.path.insert(0, program_path)
+
+    # allow the program to be directly started by calling 'main.py'
+    # without '<package_name>' being in the path already
+    if not package_name in sys.modules:
+        head, tail = os.path.split(program_path)
+
+        if not head in sys.path:
+            sys.path.insert(0, head)
+
+        if not hasattr(sys, 'frozen'):
+            # load and inject in modules list, this allows to have the source in a
+            # directory named differently than '<package_name>'
+            sys.modules[package_name] = __import__(tail, globals(), locals(), [], -1)
+
+prepare_package('starter_kit_camera_slider_demo')
+
 import time
 import signal
 import threading
@@ -35,13 +61,12 @@ import threading
 from PyQt4.QtCore import pyqtSignal, Qt, QObject, QTimer, QEvent
 from PyQt4.QtGui import QApplication, QMainWindow, QIcon, QMessageBox, QStyle, QStyleOptionSlider, QSlider
 
-from tinkerforge.ip_connection import IPConnection
-from tinkerforge.brick_stepper import BrickStepper
-from tinkerforge.bricklet_io4 import BrickletIO4
-
-from ui_mainwindow import Ui_MainWindow
-
-DEMO_VERSION = '1.0.0'
+from starter_kit_camera_slider_demo.tinkerforge.ip_connection import IPConnection
+from starter_kit_camera_slider_demo.tinkerforge.brick_stepper import BrickStepper
+from starter_kit_camera_slider_demo.tinkerforge.bricklet_io4 import BrickletIO4
+from starter_kit_camera_slider_demo.ui_mainwindow import Ui_MainWindow
+from starter_kit_camera_slider_demo.load_pixmap import load_pixmap
+from starter_kit_camera_slider_demo.config import DEMO_VERSION
 
 NO_STEPPER_BRICK_FOUND = 'No Stepper Brick found'
 NO_IO4_BRICKLET_FOUND = 'No IO-4 Bricklet found'
@@ -1077,22 +1102,7 @@ class Application(QApplication):
     def __init__(self, args):
         super(QApplication, self).__init__(args)
 
-        self.setWindowIcon(QIcon(os.path.join(get_resources_path(), 'demo-icon.png')))
-
-def get_program_path():
-    # from http://www.py2exe.org/index.cgi/WhereAmI
-    if hasattr(sys, 'frozen'):
-        path = sys.executable
-    else:
-        path = __file__
-
-    return os.path.dirname(os.path.realpath(unicode(path, sys.getfilesystemencoding())))
-
-def get_resources_path():
-    if sys.platform == 'darwin' and hasattr(sys, 'frozen'):
-        return os.path.join(os.path.split(get_program_path())[0], 'Resources')
-    else:
-        return get_program_path()
+        self.setWindowIcon(QIcon(load_pixmap('starter_kit_camera_slider_demo-icon.png')))
 
 def get_timestamp():
     return time.time() # FIXME: use monotonic clock here
