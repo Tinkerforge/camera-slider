@@ -1,7 +1,11 @@
 Camera Slider
 =============
 
-This is the repo of the Starter Kit: Camera Slider.
+**This kit is currently Work In Progress.**
 
-The Starter Kit is still in early development. Try at your own risk, there is
-no guarantee that any of the source code is in working condition.
+This is the repo of the Starter Kit: Camera Slider. It contains the
+FreeCAD CAD files of the PMMA parts as well as the demo source code.
+
+You can find more information in the `Camera Slider section
+<http://www.tinkerforge.com/en/doc/Kits/CameraSlider/CameraSlider.html>`__
+on tinkerforge.com.
