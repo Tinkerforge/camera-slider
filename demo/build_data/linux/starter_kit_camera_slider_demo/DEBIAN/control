@@ -1,0 +1,11 @@
+Package: starter-kit-camera-slider-demo
+Version: <<VERSION>>
+Section: electronics
+Maintainer: Matthias Bolte <matthias@tinkerforge.com>
+Architecture: all
+Priority: optional
+Installed-Size: <<INSTALLED_SIZE>>
+Depends: python, python-qt4, gphoto2
+Description: Starter Kit: Camera Slider Demo
+ This demo provides a small Qt GUI to demonstrate the features of the
+ Starter Kit: Camera Slider from Tinkerforge (see www.tinkerforge.com)

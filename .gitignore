@@ -1,2 +1,5 @@
 *.pyc
 ui_*.py
+demo/build
+demo/dist
+demo/starter_kit_camera_slider_demo/frozen_images.py

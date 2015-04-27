@@ -58,7 +58,7 @@ import time
 import signal
 import threading
 
-from PyQt4.QtCore import pyqtSignal, Qt, QObject, QTimer, QEvent
+from PyQt4.QtCore import pyqtSignal, Qt, QObject, QTimer, QEvent, QFont
 from PyQt4.QtGui import QApplication, QMainWindow, QIcon, QMessageBox, QStyle, QStyleOptionSlider, QSlider
 
 from starter_kit_camera_slider_demo.tinkerforge.ip_connection import IPConnection
