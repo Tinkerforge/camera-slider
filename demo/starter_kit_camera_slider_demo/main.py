@@ -56,7 +56,9 @@ prepare_package('starter_kit_camera_slider_demo')
 
 import time
 import signal
+import subprocess
 import threading
+from datetime import datetime
 
 from PyQt4.QtCore import pyqtSignal, Qt, QObject, QTimer, QEvent
 from PyQt4.QtGui import QApplication, QMainWindow, QIcon, QMessageBox, QStyle, \
@@ -126,6 +128,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     qtcb_ipcon_connected = pyqtSignal(int)
     qtcb_ipcon_disconnected = pyqtSignal(int)
     qtcb_stepper_new_state = pyqtSignal(int, int)
+    qtcb_log_append = pyqtSignal(str)
 
     def __init__(self, parent=None):
         QMainWindow.__init__(self, parent)
@@ -165,8 +168,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.capture_thread = None
         self.capture_thread_id = 0
         self.camera_trigger = None
-        self.interval = 0
+        self.image_count = 0
         self.remaining_image_count = 0
+        self.interval = 0
         self.next_capture_time = 0
         self.steps_per_interval = 0
         self.next_capture_position = 0
@@ -175,6 +179,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.qtcb_ipcon_connected.connect(self.cb_ipcon_connected)
         self.qtcb_ipcon_disconnected.connect(self.cb_ipcon_disconnected)
         self.qtcb_stepper_new_state.connect(self.cb_stepper_new_state)
+        self.qtcb_log_append.connect(self.log_append)
 
         self.tab_widget.currentChanged.connect(lambda: self.update_ui_state())
 
@@ -246,6 +251,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.time_lapse_status_timer = QTimer(self)
         self.time_lapse_status_timer.setInterval(100)
         self.time_lapse_status_timer.timeout.connect(self.update_time_lapse_status)
+
+        # prepare log tab
+        self.button_log_clear.clicked.connect(self.log_clear)
 
         # last things
         self.clear_all_uids()
@@ -514,6 +522,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         if connection_state == IPConnection.CONNECTION_STATE_DISCONNECTED:
             try:
+                host, port = self.edit_host.text(), self.spin_port.value()
                 self.button_connect.setDisabled(True)
                 self.button_connect.setText('Connecting ...')
                 self.ipcon.connect(self.edit_host.text(), self.spin_port.value())
@@ -836,31 +845,31 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self.time_lapse_in_preparation:
             self.label_time_lapse_status.setText('Moving cart to start position.')
         elif self.time_lapse_in_progress:
-            image_count = self.spin_image_count.value()
-
             if self.first_time_lapse_trigger:
                 initial_delay = self.spin_initial_delay.value()
 
                 if initial_delay == 0:
-                    self.label_time_lapse_status.setText('Moving cart to start position. Capturing image <b>1</b> of <b>{0}</b> immediately afterwards.'.format(image_count))
+                    self.label_time_lapse_status.setText('Moving cart to start position. Capturing image <b>1</b> of <b>{0}</b> immediately afterwards.'.format(self.image_count))
                 else:
                     if initial_delay == 1:
                         suffix = ''
                     else:
                         suffix = 's'
 
-                    self.label_time_lapse_status.setText('Moving cart to start position. Capturing image <b>1</b> of <b>{0}</b> afterwards with a delay of <b>{1}</b> second{2}.'.format(image_count, initial_delay, suffix))
+                    self.label_time_lapse_status.setText('Moving cart to start position. Capturing image <b>1</b> of <b>{0}</b> afterwards with a delay of <b>{1}</b> second{2}.'.format(self.image_count, initial_delay, suffix))
             elif self.remaining_image_count == 0:
-                self.label_time_lapse_status.setText('<b>{0}</b> images have been captured.'.format(image_count))
+                self.label_time_lapse_status.setText('<b>{0}</b> images have been captured.'.format(self.image_count))
             else:
                 remaining_time = max(self.next_capture_time - get_timestamp(), 0.0)
-                image_index = image_count - self.remaining_image_count + 1
-                self.label_time_lapse_status.setText('Capturing image <b>%d</b> of <b>%d</b> in <b>%.1f</b> seconds. Click the <b>Abort</b> button to abort the time lapse process.' % (image_index, image_count, remaining_time))
+                image_index = self.image_count - self.remaining_image_count + 1
+                self.label_time_lapse_status.setText('Capturing image <b>%d</b> of <b>%d</b> in <b>%.1f</b> seconds. Click the <b>Abort</b> button to abort the time lapse process.' % (image_index, self.image_count, remaining_time))
         else:
             self.label_time_lapse_status.setText('Click the <b>Prepare</b> button to move the cart to the start position. Click the <b>Start</b> button to start the time lapse process. If the cart is not in the start position yet, it will be moved there first.')
 
     def time_lapse_done(self):
         if self.time_lapse_in_progress:
+            self.log_append('Time lapse done')
+
             self.time_lapse_status_timer.stop()
             self.time_lapse_in_progress = False
             self.update_ui_state()
@@ -923,6 +932,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
                 delay = min(self.next_capture_time - get_timestamp(), 10.0)
 
+            image_index = self.image_count - self.remaining_image_count + 1
             self.remaining_image_count -= 1
 
             if self.remaining_image_count == 0:
@@ -930,7 +940,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             else:
                 self.next_capture_time += self.interval
 
-            os.system(self.camera_trigger) # FIXME: need to redirect stdout/stderr to somewhere
+            self.log_append_async(u'Triggering camera for image {0} of {1}: {2}'.format(image_index, self.image_count, self.camera_trigger))
+
+            try:
+                output = subprocess.check_output(self.camera_trigger, stderr=subprocess.STDOUT, shell=True).decode('utf-8').strip()
+                self.log_append_async(u'Camera trigger output: ' + output)
+            except subprocess.CalledProcessError as e:
+                self.log_append_async(u'Camera trigger error {0}: {1}'.format(e.returncode, e.output.decode('utf-8').strip()))
 
             if not self.time_lapse_in_progress or \
                time_lapse_id != self.time_lapse_id or \
@@ -944,6 +960,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def time_lapse_prepare(self):
         if self.stepper_ready_for_motion():
+            self.log_append('Preparing time lapse')
+
             current_position = self.stepper.get_current_position() # FIXME: blocking getter
             target_position = self.slider_start_position.value()
 
@@ -957,6 +975,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def time_lapse_start(self):
         if self.stepper_ready_for_motion():
+            self.log_append('Starting time lapse')
+
             start_position = self.slider_start_position.value()
             end_position = self.slider_end_position.value()
 
@@ -968,6 +988,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.time_lapse_id += 1
             self.first_time_lapse_trigger = True
             self.camera_trigger = self.edit_camera_trigger.text() # FIXME: add support for selecting RED Brick programs as camera triggers
+            self.image_count = self.spin_image_count.value()
             self.remaining_image_count = self.spin_image_count.value()
             self.interval = self.spin_interval.value()
             self.steps_per_interval = float(end_position - start_position) / (self.remaining_image_count - 1)
@@ -988,11 +1009,27 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def time_lapse_abort(self):
         if self.time_lapse_in_progress:
+            self.log_append('Aborting time lapse')
+
             self.motion_stop()
 
             self.time_lapse_in_progress = False
             self.time_lapse_status_timer.stop()
             self.update_ui_state()
+
+    ### log tab ###############################################################
+
+    def log_append(self, message):
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+        self.edit_log.appendPlainText(timestamp + ' - ' + message)
+        self.edit_log.verticalScrollBar().setValue(self.edit_log.verticalScrollBar().maximum())
+
+    def log_append_async(self, message):
+        self.qtcb_log_append.emit(message)
+
+    def log_clear(self):
+        self.edit_log.setPlainText('')
 
     ### callbacks #############################################################
 
@@ -1076,12 +1113,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.ipcon.set_auto_reconnect(True)
             self.clear_all_uids()
 
+        if connect_reason == IPConnection.CONNECT_REASON_AUTO_RECONNECT:
+            self.log_append('Reconnected')
+        else:
+            self.log_append('Connected')
+
         try:
             self.ipcon.enumerate()
         except:
             self.update_ui_state()
 
     def cb_ipcon_disconnected(self, disconnect_reason):
+        self.log_append('Disconnected')
+
         if disconnect_reason == IPConnection.DISCONNECT_REASON_REQUEST or not self.ipcon.get_auto_reconnect():
             self.update_ui_state()
         elif len(self.disconnect_times) >= 3 and self.disconnect_times[-3] < time.time() + 1:
