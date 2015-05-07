@@ -163,19 +163,20 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.full_break_in_progress = False
 
+        self.test_in_progress = False
+        self.test_thread = None
         self.time_lapse_in_progress = False
         self.time_lapse_in_preparation = False
         self.time_lapse_id = 0
         self.first_time_lapse_trigger = False
-        self.capture_thread = None
-        self.capture_thread_id = 0
-        self.camera_trigger = None
+        self.trigger_thread = None
+        self.trigger_thread_id = 0
         self.image_count = 0
         self.remaining_image_count = 0
         self.interval = 0
-        self.next_capture_time = 0
+        self.next_trigger_time = 0
         self.steps_per_interval = 0
-        self.next_capture_position = 0
+        self.next_trigger_position = 0
 
         self.qtcb_ipcon_enumerate.connect(self.cb_ipcon_enumerate)
         self.qtcb_ipcon_connected.connect(self.cb_ipcon_connected)
@@ -246,6 +247,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.slider_start_position.installEventFilter(self)
 
+        self.button_time_lapse_test.clicked.connect(self.time_lapse_test)
         self.button_time_lapse_prepare.clicked.connect(self.time_lapse_prepare)
         self.button_time_lapse_start.clicked.connect(self.time_lapse_start)
         self.button_time_lapse_abort.clicked.connect(self.time_lapse_abort)
@@ -429,7 +431,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.spin_decay.setEnabled(not self.stepper_driving and not self.time_lapse_in_progress)
 
         # time lapse tab
-        self.edit_camera_trigger.setEnabled(not self.time_lapse_in_progress)
+        self.edit_camera_trigger.setEnabled(not self.test_in_progress and not self.time_lapse_in_progress)
+        self.button_time_lapse_test.setEnabled(not self.test_in_progress and not self.time_lapse_in_progress)
         self.spin_image_count.setEnabled(not self.time_lapse_in_progress)
         self.spin_initial_delay.setEnabled(not self.time_lapse_in_progress)
         self.spin_interval.setEnabled(not self.time_lapse_in_progress)
@@ -437,9 +440,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.spin_start_position.setEnabled(not self.time_lapse_in_progress)
         self.slider_end_position.setEnabled(not self.time_lapse_in_progress)
         self.spin_end_position.setEnabled(not self.time_lapse_in_progress)
-        self.button_time_lapse_prepare.setEnabled(not self.stepper_driving and not self.time_lapse_in_progress)
-        self.button_time_lapse_start.setEnabled(not self.stepper_driving and not self.time_lapse_in_progress)
-        self.button_time_lapse_abort.setEnabled(self.time_lapse_in_progress)
+        self.button_time_lapse_prepare.setEnabled(not self.test_in_progress and not self.stepper_driving and not self.time_lapse_in_progress)
+        self.button_time_lapse_start.setEnabled(not self.test_in_progress and not self.stepper_driving and not self.time_lapse_in_progress)
+        self.button_time_lapse_abort.setEnabled(not self.test_in_progress and self.time_lapse_in_progress)
 
         self.update_time_lapse_status()
 
@@ -844,7 +847,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     ### time lapse tab ####################################################
 
     def update_time_lapse_status(self):
-        if self.time_lapse_in_preparation:
+        if self.test_in_progress:
+            self.label_time_lapse_status.setText('Testing camera trigger, see <b>Log</b> tab for result.')
+        elif self.time_lapse_in_preparation:
             self.label_time_lapse_status.setText('Moving cart to start position.')
         elif self.time_lapse_in_progress:
             if self.first_time_lapse_trigger:
@@ -862,11 +867,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             elif self.remaining_image_count == 0:
                 self.label_time_lapse_status.setText('<b>{0}</b> images have been captured.'.format(self.image_count))
             else:
-                remaining_time = max(self.next_capture_time - get_timestamp(), 0.0)
+                remaining_time = max(self.next_trigger_time - get_timestamp(), 0.0)
                 image_index = self.image_count - self.remaining_image_count + 1
                 self.label_time_lapse_status.setText('Capturing image <b>%d</b> of <b>%d</b> in <b>%.1f</b> seconds. Click the <b>Abort</b> button to abort the time lapse process.' % (image_index, self.image_count, remaining_time))
         else:
-            self.label_time_lapse_status.setText('Click the <b>Prepare</b> button to move the cart to the start position. Click the <b>Start</b> button to start the time lapse process. If the cart is not in the start position yet, it will be moved there first.')
+            self.label_time_lapse_status.setText('Click the <b>Test</b> button to test the camera trigger (result on <b>Log</b> tab). Click the <b>Prepare</b> button to move the cart to the start position. Click the <b>Start</b> button to start the time lapse process. If the cart is not in the start position yet, it will be moved there first.')
 
     def time_lapse_done(self):
         if self.time_lapse_in_progress:
@@ -881,7 +886,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             uid = self.get_stepper_uid()
 
             if uid != None:
-                self.next_capture_position += self.steps_per_interval
+                self.next_trigger_position += self.steps_per_interval
 
                 if self.stepper_reversed:
                     minimum_position = self.maximum_positions[uid]
@@ -895,7 +900,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 if self.remaining_image_count == 1:
                     target_position = end_position
                 else:
-                    target_position = int(round(self.next_capture_position))
+                    target_position = int(round(self.next_trigger_position))
 
                 if target_position >= minimum_position and target_position <= maximum_position:
                     current_position = self.stepper.get_current_position() # FIXME: blocking getter
@@ -912,53 +917,75 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self.time_lapse_in_progress and self.remaining_image_count > 0:
             if self.first_time_lapse_trigger:
                 self.first_time_lapse_trigger = False
-                self.next_capture_time = get_timestamp() + self.spin_initial_delay.value()
+                self.next_trigger_time = get_timestamp() + self.spin_initial_delay.value()
 
-            self.capture_thread_id += 1
-            self.capture_thread = threading.Thread(target=self.time_lapse_capture, args=(self.time_lapse_id, self.capture_thread_id,))
-            self.capture_thread.daemon = True
-            self.capture_thread.start()
+            def trigger(time_lapse_id, trigger_thread_id, camera_trigger):
+                if self.time_lapse_in_progress and self.remaining_image_count > 0:
+                    delay = min(self.next_trigger_time - get_timestamp(), 10.0)
 
-    # NOTE: called from capture thread
-    def time_lapse_capture(self, time_lapse_id, capture_thread_id):
-        if self.time_lapse_in_progress and self.remaining_image_count > 0:
-            delay = min(self.next_capture_time - get_timestamp(), 10.0)
+                    while delay > 0:
+                        time.sleep(delay)
 
-            while delay > 0:
-                time.sleep(delay)
+                        if not self.time_lapse_in_progress or \
+                           time_lapse_id != self.time_lapse_id or \
+                           trigger_thread_id != self.trigger_thread_id:
+                            return
 
-                if not self.time_lapse_in_progress or \
-                   time_lapse_id != self.time_lapse_id or \
-                   capture_thread_id != self.capture_thread_id:
-                    return
+                        delay = min(self.next_trigger_time - get_timestamp(), 10.0)
 
-                delay = min(self.next_capture_time - get_timestamp(), 10.0)
+                    image_index = self.image_count - self.remaining_image_count + 1
+                    self.remaining_image_count -= 1
 
-            image_index = self.image_count - self.remaining_image_count + 1
-            self.remaining_image_count -= 1
+                    if self.remaining_image_count == 0:
+                        self.next_trigger_time = 0
+                    else:
+                        self.next_trigger_time += self.interval
 
-            if self.remaining_image_count == 0:
-                self.next_capture_time = 0
-            else:
-                self.next_capture_time += self.interval
+                    self.log_append_async(u'Triggering camera for image {0} of {1}: {2}'.format(image_index, self.image_count, camera_trigger))
 
-            self.log_append_async(u'Triggering camera for image {0} of {1}: {2}'.format(image_index, self.image_count, self.camera_trigger))
+                    try:
+                        output = subprocess.check_output(camera_trigger, stderr=subprocess.STDOUT, shell=True).decode('utf-8').strip()
+                        self.log_append_async(u'Camera trigger output: ' + output)
+                    except subprocess.CalledProcessError as e:
+                        self.log_append_async(u'Camera trigger error {0}: {1}'.format(e.returncode, e.output.decode('utf-8').strip()))
 
-            try:
-                output = subprocess.check_output(self.camera_trigger, stderr=subprocess.STDOUT, shell=True).decode('utf-8').strip()
-                self.log_append_async(u'Camera trigger output: ' + output)
-            except subprocess.CalledProcessError as e:
-                self.log_append_async(u'Camera trigger error {0}: {1}'.format(e.returncode, e.output.decode('utf-8').strip()))
+                    if not self.time_lapse_in_progress or \
+                       time_lapse_id != self.time_lapse_id or \
+                       trigger_thread_id != self.trigger_thread_id:
+                        return
 
-            if not self.time_lapse_in_progress or \
-               time_lapse_id != self.time_lapse_id or \
-               capture_thread_id != self.capture_thread_id:
-                return
+                    if self.remaining_image_count == 0:
+                        QTimer.singleShot(0, self.time_lapse_done)
+                    else:
+                        QTimer.singleShot(0, self.time_lapse_next)
 
-            if self.remaining_image_count == 0:
-                QTimer.singleShot(0, self.time_lapse_done)
-            else:
-                QTimer.singleShot(0, self.time_lapse_next)
+            self.trigger_thread_id += 1
+            self.trigger_thread = threading.Thread(target=trigger, args=(self.time_lapse_id, self.trigger_thread_id, self.edit_camera_trigger.text()))
+            self.trigger_thread.daemon = True
+            self.trigger_thread.start()
+
+    def time_lapse_test(self):
+        if not self.test_in_progress and not self.time_lapse_in_progress:
+            def test(camera_trigger):
+                self.log_append_async(u'Testing camera trigger: {0}'.format(camera_trigger))
+
+                try:
+                    output = subprocess.check_output(camera_trigger, stderr=subprocess.STDOUT, shell=True).decode('utf-8').strip()
+                    self.log_append_async(u'Camera trigger output: ' + output)
+                except subprocess.CalledProcessError as e:
+                    self.log_append_async(u'Camera trigger error {0}: {1}'.format(e.returncode, e.output.decode('utf-8').strip()))
+
+                self.log_append_async('Camera trigger test done')
+
+                self.test_in_progress = False
+                QTimer.singleShot(0, self.update_ui_state)
+
+            self.test_in_progress = True
+            self.test_thread = threading.Thread(target=test, args=(self.edit_camera_trigger.text(),))
+            self.test_thread.daemon = True
+            self.test_thread.start()
+
+            self.update_ui_state()
 
     def time_lapse_prepare(self):
         if self.stepper_ready_for_motion():
@@ -976,7 +1003,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.stepper.set_target_position(target_position)
 
     def time_lapse_start(self):
-        if self.stepper_ready_for_motion():
+        if not self.test_in_progress and self.stepper_ready_for_motion():
             self.log_append('Starting time lapse')
 
             start_position = self.slider_start_position.value()
@@ -989,17 +1016,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.time_lapse_in_progress = True
             self.time_lapse_id += 1
             self.first_time_lapse_trigger = True
-            self.camera_trigger = self.edit_camera_trigger.text() # FIXME: add support for selecting RED Brick programs as camera triggers
             self.image_count = self.spin_image_count.value()
             self.remaining_image_count = self.spin_image_count.value()
             self.interval = self.spin_interval.value()
             self.steps_per_interval = float(end_position - start_position) / (self.remaining_image_count - 1)
-            self.next_capture_position = float(start_position)
+            self.next_trigger_position = float(start_position)
 
             self.time_lapse_status_timer.start()
 
             current_position = self.stepper.get_current_position() # FIXME: blocking getter
-            target_position = int(round(self.next_capture_position))
+            target_position = int(round(self.next_trigger_position))
 
             if current_position != target_position:
                 self.prepare_stepper_motion()
