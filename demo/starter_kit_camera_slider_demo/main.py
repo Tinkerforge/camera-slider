@@ -52,7 +52,9 @@ def prepare_package(package_name):
             # directory named differently than '<package_name>'
             sys.modules[package_name] = __import__(tail, globals(), locals(), [], -1)
 
-prepare_package('starter_kit_camera_slider_demo')
+    return program_path
+
+program_path = prepare_package('starter_kit_camera_slider_demo')
 
 import time
 import signal
@@ -1153,6 +1155,23 @@ def get_timestamp():
     return time.time() # FIXME: use monotonic clock here
 
 def main():
+    if sys.platform == 'win32':
+        if hasattr(sys, 'frozen'):
+            gphoto2_path = os.path.join(program_path, 'gphoto2')
+        else:
+            gphoto2_path = os.path.join(program_path, '..', 'build_data', 'windows', 'gphoto2')
+
+        os.environ['PATH'] = ';'.join(os.environ.get('PATH', '').split(';') + [gphoto2_path])
+    elif sys.platform == 'darwin':
+        if hasattr(sys, 'frozen'):
+            gphoto2_path = os.path.join(program_path, 'Resources', 'gphoto2')
+        else:
+            gphoto2_path = os.path.join(program_path, '..', 'build_data', 'macosx', 'gphoto2')
+
+        os.environ['PATH'] = ':'.join(os.environ.get('PATH', '').split(':') + [gphoto2_path])
+        os.environ['CAMLIBS'] = os.path.join(gphoto2_path, 'camlibs')
+        os.environ['IOLIBS'] = os.path.join(gphoto2_path, 'iolibs')
+
     args = sys.argv
 
     if sys.platform == 'win32':
