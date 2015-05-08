@@ -1,0 +1,216 @@
+diff --git a/configure.ac b/configure.ac
+index 836c479..75e2666 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -461,7 +461,7 @@ AC_ARG_WITH([camlibdir],[AS_HELP_STRING(
+ ])
+ AC_MSG_RESULT([${camlibdir}])
+ AC_SUBST([camlibdir])
+-AM_CPPFLAGS="$AM_CPPFLAGS -DCAMLIBS=\\\"\$(camlibdir)\\\""
++AM_CPPFLAGS="$AM_CPPFLAGS -DCAMLIBS=\\\"camlibs\\\""
+ 
+ 
+ dnl ---------------------------------------------------------------------------
+diff --git a/libgphoto2/gphoto2-abilities-list.c b/libgphoto2/gphoto2-abilities-list.c
+index 86881bc..8a7dbfa 100644
+--- a/libgphoto2/gphoto2-abilities-list.c
++++ b/libgphoto2/gphoto2-abilities-list.c
+@@ -35,6 +35,8 @@
+ #include <gphoto2/gphoto2-port-log.h>
+ #include <gphoto2/gphoto2-library.h>
+ 
++#include <windows.h>
++
+ #ifdef ENABLE_NLS
+ #  include <libintl.h>
+ #  undef _
+@@ -440,16 +442,16 @@ gp_abilities_list_detect (CameraAbilitiesList *list,
+ 		}
+ 		case GP_PORT_DISK: {
+ 			char	*s, path[1024];
+-			struct stat stbuf;
++			//struct stat stbuf;
+ 		
+ 			s = strchr (xpath, ':');
+ 			if (!s)
+ 				break;
+ 			s++;
+ 			snprintf (path, sizeof(path), "%s/DCIM", s);
+-			if (-1 == stat(path, &stbuf)) {
++			if (/*-1 == stat(path, &stbuf)*/ GetFileAttributes(path) == INVALID_FILE_ATTRIBUTES) {
+ 				snprintf (path, sizeof(path), "%s/dcim", s);
+-				if (-1 == stat(path, &stbuf))
++				if (/*-1 == stat(path, &stbuf)*/ GetFileAttributes(path) == INVALID_FILE_ATTRIBUTES)
+ 					continue;
+ 			}
+ 			gp_list_append (l, "Mass Storage Camera", xpath);
+diff --git a/libgphoto2/gphoto2-setting.c b/libgphoto2/gphoto2-setting.c
+index d2e815e..03a686f 100644
+--- a/libgphoto2/gphoto2-setting.c
++++ b/libgphoto2/gphoto2-setting.c
+@@ -34,6 +34,7 @@
+ #include <gphoto2/gphoto2-result.h>
+ #include <gphoto2/gphoto2-port-log.h>
+ #include <gphoto2/gphoto2-port-portability.h>
++#include <windows.h>
+ 
+ /**
+  * Internal struct to store settings.
+@@ -166,25 +167,17 @@ static int
+ load_settings (void)
+ {
+ 	FILE *f;
+-	char buf[1024], *id, *key, *value;
+-
+-	/* Make sure the directories are created */
+-	GP_LOG_D ("Creating $HOME/.gphoto");
+-#ifdef WIN32
+-	GetWindowsDirectory (buf, sizeof(buf));
+-	strcat (buf, "\\gphoto");
+-#else
+-	snprintf (buf, sizeof(buf), "%s/.gphoto", getenv ("HOME"));
+-#endif
+-	(void)gp_system_mkdir (buf);
++	char buf[1024] = "gphoto2.ini";
++	char *id, *key, *value, *p;
++
++	GetModuleFileName(NULL, buf, sizeof(buf) - strlen(buf));
++	p = strrchr(buf, '\\');
++
++	if (p != NULL) {
++		strcpy(p + 1, "gphoto2.ini");
++	}
+ 
+ 	glob_setting_count = 0;
+-#ifdef WIN32
+-	GetWindowsDirectory(buf, sizeof(buf));
+-	strcat(buf, "\\gphoto\\settings");
+-#else
+-	snprintf(buf, sizeof(buf), "%s/.gphoto/settings", getenv("HOME"));
+-#endif
+ 
+ 	if (verify_settings(buf) != GP_OK)
+ 		/* verify_settings will unlink and recreate the settings file */
+@@ -223,12 +216,18 @@ static int
+ save_settings (void)
+ {
+ 	FILE *f;
+-	char buf[1024];
++	char buf[1024] = "gphoto2.ini";
++	char *p;
+ 	int x=0;
+ 
+-	snprintf (buf, sizeof(buf), "%s/.gphoto/settings", getenv ("HOME"));
++	GetModuleFileName(NULL, buf, sizeof(buf) - strlen(buf));
++	p = strrchr(buf, '\\');
++
++	if (p != NULL) {
++		strcpy(p + 1, "gphoto2.ini");
++	}
+ 
+-	GP_LOG_D ("Saving %i setting(s) to file \"%s\"", glob_setting_count, buf);
++	GP_LOG_D ("Saving %i setting(s) to file '%s'", glob_setting_count, buf);
+ 
+ 	if ((f=fopen(buf, "w+"))==NULL) {
+ 		GP_LOG_E ("Can't open settings file for writing.");
+diff --git a/libgphoto2_port/configure.ac b/libgphoto2_port/configure.ac
+index 779a219..2ca95ab 100644
+--- a/libgphoto2_port/configure.ac
++++ b/libgphoto2_port/configure.ac
+@@ -247,7 +247,7 @@ try_ttylock=true
+ try_lockdev=true
+ try_resmgr=true
+ 
+-if test "$ac_cv_header_sgtty_h" = "no"
++if test "$ac_cv_header_termios_h" = "no"
+ then
+   have_serial=false
+   serial_msg=no
+@@ -421,7 +421,7 @@ for x in ${IOLIB_LIST}; do
+ done
+ AC_SUBST(IOLIB_LTLIST)
+ AC_SUBST([iolibdir],["\$(libdir)/\$(PACKAGE_TARNAME)/\$(VERSION)"])
+-AM_CPPFLAGS="$AM_CPPFLAGS -DIOLIBS=\\\"${iolibdir}\\\""
++AM_CPPFLAGS="$AM_CPPFLAGS -DIOLIBS=\\\"iolibs\\\""
+ 
+ 
+ dnl --------------------------------------------------------------------
+diff --git a/libgphoto2_port/disk/disk.c b/libgphoto2_port/disk/disk.c
+index 9d722fd..b26321f 100644
+--- a/libgphoto2_port/disk/disk.c
++++ b/libgphoto2_port/disk/disk.c
+@@ -57,6 +57,8 @@
+ #include <gphoto2/gphoto2-port-result.h>
+ #include <gphoto2/gphoto2-port-log.h>
+ 
++#include <windows.h>
++
+ #ifdef ENABLE_NLS
+ #  include <libintl.h>
+ #  undef _
+@@ -97,7 +99,7 @@ gp_port_library_list (GPPortInfoList *list)
+ 	struct mntent *mntent;
+ 	char	path[1024];
+ 	char	*s;
+-	struct stat stbuf;
++	//struct stat stbuf;
+ 
+ 	mnt = setmntent ("/etc/fstab", "r");
+ 	if (mnt) {
+@@ -139,9 +141,9 @@ gp_port_library_list (GPPortInfoList *list)
+ 				continue;
+ 			}
+ 			snprintf (path, sizeof(path), "%s/DCIM", mntent->mnt_dir);
+-			if (-1 == stat(path, &stbuf)) {
++			if (/*-1 == stat(path, &stbuf)*/ GetFileAttributes(path) == INVALID_FILE_ATTRIBUTES) {
+ 				snprintf (path, sizeof(path), "%s/dcim", mntent->mnt_dir);
+-				if (-1 == stat(path, &stbuf))
++				if (/*-1 == stat(path, &stbuf)*/ GetFileAttributes(path) == INVALID_FILE_ATTRIBUTES)
+ 					continue;
+ 			}
+ 			s = malloc (strlen(_("Media '%s'"))+strlen(mntent->mnt_fsname)+1);
+@@ -202,9 +204,9 @@ gp_port_library_list (GPPortInfoList *list)
+ 			}
+ 
+ 			snprintf (path, sizeof(path), "%s/DCIM", mntent->mnt_dir);
+-			if (-1 == stat(path, &stbuf)) {
++			if (/*-1 == stat(path, &stbuf)*/ GetFileAttributes(path) == INVALID_FILE_ATTRIBUTES) {
+ 				snprintf (path, sizeof(path), "%s/dcim", mntent->mnt_dir);
+-				if (-1 == stat(path, &stbuf))
++				if (/*-1 == stat(path, &stbuf)*/ GetFileAttributes(path) == INVALID_FILE_ATTRIBUTES)
+ 					continue;
+ 			}
+ 			/* automount should be blacklist here, but we still need
+@@ -238,7 +240,7 @@ gp_port_library_list (GPPortInfoList *list)
+ 	FILE *mnt;
+ 	struct mnttab mnttab;
+ 	char	path[1024];
+-	struct stat stbuf;
++	//struct stat stbuf;
+ 
+ 	info.type = GP_PORT_DISK;
+ 
+@@ -252,9 +254,9 @@ gp_port_library_list (GPPortInfoList *list)
+ 				continue;
+ 
+ 			snprintf (path, sizeof(path), "%s/DCIM", mnttab.mnt_mountp);
+-			if (-1 == stat(path, &stbuf)) {
++			if (/*-1 == stat(path, &stbuf)*/ GetFileAttributes(path) == INVALID_FILE_ATTRIBUTES) {
+ 				snprintf (path, sizeof(path), "%s/dcim", mnttab.mnt_mountp);
+-				if (-1 == stat(path, &stbuf))
++				if (/*-1 == stat(path, &stbuf)*/ GetFileAttributes(path) == INVALID_FILE_ATTRIBUTES)
+ 					continue;
+ 			}
+ 			snprintf (info.name, sizeof(info.name), _("Media '%s'"), mntent.mnt_special),
+@@ -275,9 +277,9 @@ gp_port_library_list (GPPortInfoList *list)
+ 				continue;
+ 
+ 			snprintf (path, sizeof(path), "%s/DCIM", mnttab.mnt_mountp);
+-			if (-1 == stat(path, &stbuf)) {
++			if (/*-1 == stat(path, &stbuf)*/ GetFileAttributes(path) == INVALID_FILE_ATTRIBUTES) {
+ 				snprintf (path, sizeof(path), "%s/dcim", mnttab.mnt_mountp);
+-				if (-1 == stat(path, &stbuf))
++				if (/*-1 == stat(path, &stbuf)*/ GetFileAttributes(path) == INVALID_FILE_ATTRIBUTES)
+ 					continue;
+ 			}
+ 			snprintf (info.name, sizeof(info.name), _("Media '%s'"), mntent.mnt_special),
