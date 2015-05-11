@@ -1183,20 +1183,20 @@ def get_timestamp():
 def main():
     if sys.platform == 'win32':
         if hasattr(sys, 'frozen'):
-            gphoto2_path = os.path.join(program_path, 'gphoto2')
+            gphoto2_path = os.path.realpath(os.path.join(program_path, 'gphoto2'))
         else:
-            gphoto2_path = os.path.join(program_path, '..', 'build_data', 'windows', 'gphoto2')
+            gphoto2_path = os.path.realpath(os.path.join(program_path, '..', 'build_data', 'windows', 'gphoto2'))
 
-        os.environ['PATH'] = ';'.join(os.environ.get('PATH', '').split(';') + [gphoto2_path])
+        os.environ['PATH'] = ';'.join([gphoto2_path] + os.environ.get('PATH', '').split(';'))
         os.environ['CAMLIBS'] = os.path.join(gphoto2_path, 'camlibs')
         os.environ['IOLIBS'] = os.path.join(gphoto2_path, 'iolibs')
     elif sys.platform == 'darwin':
         if hasattr(sys, 'frozen'):
-            gphoto2_path = os.path.join(program_path, 'Resources', 'gphoto2')
+            gphoto2_path = os.path.realpath(os.path.join(program_path, '..', 'Resources', 'gphoto2'))
         else:
-            gphoto2_path = os.path.join(program_path, '..', 'build_data', 'macosx', 'gphoto2')
+            gphoto2_path = os.path.realpath(os.path.join(program_path, '..', 'build_data', 'macosx', 'gphoto2'))
 
-        os.environ['PATH'] = ':'.join(os.environ.get('PATH', '').split(':') + [gphoto2_path])
+        os.environ['PATH'] = ':'.join([gphoto2_path] + os.environ.get('PATH', '').split(':'))
         os.environ['CAMLIBS'] = os.path.join(gphoto2_path, 'camlibs')
         os.environ['IOLIBS'] = os.path.join(gphoto2_path, 'iolibs')
 
