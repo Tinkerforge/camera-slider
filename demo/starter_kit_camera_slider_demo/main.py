@@ -22,6 +22,10 @@ Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 Boston, MA 02111-1307, USA.
 """
 
+# FIXME: the Stepper Brick position is represented as an int32_t. the position
+# can overflow between the minimum and maximum position. the code does not deal
+# with this (yet)
+
 import sip
 sip.setapi('QString', 2)
 sip.setapi('QVariant', 2)
@@ -146,7 +150,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.devices = {} # uid -> (connected_uid, device_identifier)
 
         self.stepper = None
-        self.stepper_calibrated = False
+        self.stepper_info = None
         self.stepper_enabled = False
         self.stepper_driving = False
         self.stepper_reversed = False
@@ -159,7 +163,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.shutdown_in_progress = False
 
         self.calibration_in_progress = False
-        self.maximum_positions = {} # uid -> maximum_position
+        self.stepper_infos = {}
         self.temporary_minimum_position = None
         self.temporary_maximum_position = None
 
@@ -219,6 +223,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.button_calibration_backward.released.connect(self.calibration_backward_released)
         self.button_calibration_set_minimum.clicked.connect(self.calibration_set_minimum)
         self.button_calibration_set_maximum.clicked.connect(self.calibration_set_maximum)
+
+        for stepper_info in config.get_stepper_infos(config.STEPPER_INFO_COUNT):
+            self.stepper_infos[stepper_info.uid] = stepper_info
 
         # prepare motion tab
         self.current_position_syncer = SliderSpinSyncer(self, self.slider_current_position, self.spin_current_position, None)
@@ -341,8 +348,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         connected = connection_state == IPConnection.CONNECTION_STATE_CONNECTED
 
         self.tab_widget.setTabEnabled(TAB_CALIBRATION, connected)
-        self.tab_widget.setTabEnabled(TAB_MOTION, connected and self.stepper_calibrated)
-        self.tab_widget.setTabEnabled(TAB_TIME_LAPSE, connected and self.stepper_calibrated)
+        self.tab_widget.setTabEnabled(TAB_MOTION, connected and self.stepper_info != None)
+        self.tab_widget.setTabEnabled(TAB_TIME_LAPSE, connected and self.stepper_info != None)
 
         # connection tab
         self.button_connect.setEnabled(True)
@@ -397,12 +404,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.button_calibration_start.setText('Apply')
             self.label_calibration_help1.setText('Set the desired minimum and maximum position using the buttons below. Afterwards click the <b>Apply</b> button to use the new calibration.')
         elif stepper_uid != None:
-            if stepper_uid not in self.maximum_positions:
+            if stepper_uid not in self.stepper_infos:
                 self.button_calibration_start.setText('Start')
                 self.label_calibration_help1.setText('The selected Stepper Brick [<b>{0}</b>] is <b>not</b> calibrated. Click the <b>Start</b> button to calibrate the selected Stepper Brick.'.format(stepper_uid))
             else:
                 self.button_calibration_start.setText('Start')
-                self.label_calibration_help1.setText('The selected Stepper Brick [<b>{0}</b>] is calibrated. It has <b>{1}</b> steps of motion range. If the cart was manually moved since the last calibration, then click the <b>Start</b> button to recalibrate the selected Stepper Brick.'.format(stepper_uid, abs(self.maximum_positions[stepper_uid])))
+                self.label_calibration_help1.setText('The selected Stepper Brick [<b>{0}</b>] is calibrated. It has <b>{1}</b> steps of motion range. If the cart was manually moved since the last calibration, then click the <b>Start</b> button to recalibrate the selected Stepper Brick.'.format(stepper_uid, abs(self.stepper_infos[stepper_uid].motion_range)))
         else:
             self.button_calibration_start.setText('Start')
             self.label_calibration_help1.setText('')
@@ -484,7 +491,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def stepper_ready_for_motion(self, ignore_time_lapse_in_progress=False):
         return self.stepper != None and \
-               self.stepper_calibrated and \
+               self.stepper_info != None and \
                not self.stepper_driving and \
                not self.disconnect_in_progress and \
                not self.calibration_in_progress and \
@@ -516,6 +523,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.full_break_in_progress = False
             self.speed_ramping_changed()
 
+        if self.stepper != None and self.stepper_info != None:
+            self.stepper_info.current_position = self.stepper.get_current_position() # FIXME: blocking getter
+
         if self.time_lapse_in_progress:
             self.time_lapse_trigger()
 
@@ -526,6 +536,22 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.disconnect(False)
 
         self.update_ui_state()
+
+    def position_stepper_to_display(self, position):
+        if self.stepper_info != None:
+            # FIXME: handle out-of-motion-range positions?
+            return abs(position - self.stepper_info.minimum_position)
+
+        return 0
+
+    def position_display_to_stepper(self, position):
+        if self.stepper_info != None:
+            if self.stepper_reversed:
+                return self.stepper_info.minimum_position - position
+            else:
+                return self.stepper_info.minimum_position + position
+
+        return 0
 
     ### connection tab ########################################################
 
@@ -548,6 +574,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.disconnect(True)
 
     def disconnect(self, ask_user):
+        config.set_stepper_infos(self.stepper_infos.values())
+
         if self.stepper != None and (self.stepper_enabled or self.time_lapse_in_progress) and not self.disconnect_in_progress:
             if ask_user:
                 if self.time_lapse_in_progress:
@@ -603,7 +631,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.stepper.register_callback(BrickStepper.CALLBACK_NEW_STATE, None)
 
         self.stepper = None
-        self.stepper_calibrated = False
+        self.stepper_info = None
         self.stepper_reversed = False
         uid = self.get_stepper_uid()
 
@@ -641,8 +669,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             uid = self.get_stepper_uid()
 
             if uid != None:
-                self.maximum_positions.pop(uid, None)
-                self.stepper_calibrated = False
+                self.stepper_infos.pop(uid, None)
+                self.stepper_info = None
 
             self.calibration_in_progress = True
             self.temporary_minimum_position = None
@@ -651,9 +679,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             uid = self.get_stepper_uid()
 
             if uid != None:
-                self.maximum_positions[uid] = self.temporary_maximum_position - self.temporary_minimum_position
-                new_current_position = self.stepper.get_current_position() - self.temporary_minimum_position # FIXME: blocking getter
-                self.stepper.set_current_position(new_current_position)
+                stepper_info = config.StepperInfo()
+
+                stepper_info.uid = uid
+                stepper_info.minimum_position = self.temporary_minimum_position
+                stepper_info.maximum_position = self.temporary_maximum_position
+                stepper_info.current_position = self.stepper.get_current_position() # FIXME: blocking getter
+
+                self.stepper_infos[uid] = stepper_info
 
             self.calibration_abort()
             self.calibration_changed()
@@ -712,45 +745,46 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.update_ui_state()
 
     def calibration_changed(self):
-        self.stepper_calibrated = False
+        self.stepper_info = None
         self.stepper_reversed = False
         uid = self.get_stepper_uid()
 
-        if uid != None:
-            self.stepper_calibrated = uid in self.maximum_positions
+        if uid != None and uid in self.stepper_infos:
+            self.stepper_info = self.stepper_infos[uid]
+            self.stepper_reversed = self.stepper_info.maximum_position < self.stepper_info.minimum_position
+            current_position = self.stepper.get_current_position() # FIXME: blocking getter
+            current_position_offset = current_position - self.stepper_info.current_position
+            self.stepper_info.minimum_position += current_position_offset
+            self.stepper_info.maximum_position += current_position_offset
+            self.stepper_info.current_position = current_position
 
-            if self.stepper_calibrated:
-                maximum_position = self.maximum_positions[uid]
-                self.stepper_reversed = maximum_position < 0
-                maximum_position = abs(maximum_position)
+            # motion tab
+            self.slider_current_position.setMaximum(self.stepper_info.motion_range)
+            self.spin_current_position.setMaximum(self.stepper_info.motion_range)
+            self.label_current_position_unit.setText('of {0}'.format(self.stepper_info.motion_range))
 
-                # motion tab
-                self.slider_current_position.setMaximum(maximum_position)
-                self.spin_current_position.setMaximum(maximum_position)
-                self.label_current_position_unit.setText('of {0}'.format(maximum_position))
+            self.target_position_syncer.callback_blocked = True
 
-                self.slider_target_position.setMaximum(maximum_position)
-                self.spin_target_position.setMaximum(maximum_position)
-                self.label_target_position_unit.setText('of {0}'.format(maximum_position))
+            self.slider_target_position.setMaximum(self.stepper_info.motion_range)
+            self.spin_target_position.setMaximum(self.stepper_info.motion_range)
+            self.label_target_position_unit.setText('of {0}'.format(self.stepper_info.motion_range))
 
-                current_position = self.stepper.get_current_position() # FIXME: blocking getter
+            current_position = self.stepper.get_current_position() # FIXME: blocking getter
+            self.slider_target_position.setValue(self.position_stepper_to_display(current_position))
 
-                if self.stepper_reversed:
-                    current_position = -current_position
+            self.target_position_syncer.callback_blocked = False
 
-                self.slider_target_position.setValue(current_position)
+            self.update_current_position()
+            self.current_position_timer.start()
 
-                self.update_current_position()
-                self.current_position_timer.start()
+            # time lapse tab
+            self.slider_start_position.setMaximum(self.stepper_info.motion_range)
+            self.spin_start_position.setMaximum(self.stepper_info.motion_range)
+            self.label_start_position_unit.setText('of {0}'.format(self.stepper_info.motion_range))
 
-                # time lapse tab
-                self.slider_start_position.setMaximum(maximum_position)
-                self.spin_start_position.setMaximum(maximum_position)
-                self.label_start_position_unit.setText('of {0}'.format(maximum_position))
-
-                self.slider_end_position.setMaximum(maximum_position)
-                self.spin_end_position.setMaximum(maximum_position)
-                self.label_end_position_unit.setText('of {0}'.format(maximum_position))
+            self.slider_end_position.setMaximum(self.stepper_info.motion_range)
+            self.spin_end_position.setMaximum(self.stepper_info.motion_range)
+            self.label_end_position_unit.setText('of {0}'.format(self.stepper_info.motion_range))
 
         self.velocity_changed()
         self.speed_ramping_changed()
@@ -759,17 +793,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     ### motion tab ####################################################
 
     def update_current_position(self):
-        if self.stepper != None and self.stepper_calibrated and self.tab_widget.currentIndex() == TAB_MOTION:
-            current_position = abs(self.stepper.get_current_position()) # FIXME: blocking getter
-            self.slider_current_position.setValue(current_position)
+        if self.stepper != None and self.stepper_info != None and self.tab_widget.currentIndex() == TAB_MOTION:
+            current_position = self.stepper.get_current_position() # FIXME: blocking getter
+            self.slider_current_position.setValue(self.position_stepper_to_display(current_position))
 
     def target_position_changed(self):
         if self.stepper_ready_for_motion():
             current_position = self.stepper.get_current_position() # FIXME: blocking getter
-            target_position = self.slider_target_position.value()
-
-            if self.stepper_reversed:
-                target_position = -target_position
+            target_position = self.position_display_to_stepper(self.slider_target_position.value())
 
             if current_position != target_position:
                 self.prepare_stepper_motion()
@@ -785,9 +816,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 current_position = self.stepper.get_current_position() # FIXME: blocking getter
 
                 if self.stepper_reversed:
-                    target_position = 0
+                    target_position = self.stepper_infos[uid].minimum_position
                 else:
-                    target_position = self.maximum_positions[uid]
+                    target_position = self.stepper_infos[uid].maximum_position
 
                 if current_position != target_position:
                     self.prepare_stepper_motion()
@@ -806,9 +837,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 current_position = self.stepper.get_current_position() # FIXME: blocking getter
 
                 if self.stepper_reversed:
-                    target_position = self.maximum_positions[uid]
+                    target_position = self.stepper_infos[uid].maximum_position
                 else:
-                    target_position = 0
+                    target_position = self.stepper_infos[uid].minimum_position
 
                 if current_position != target_position:
                     self.prepare_stepper_motion()
@@ -889,35 +920,24 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def time_lapse_next(self):
         if self.stepper_ready_for_motion(ignore_time_lapse_in_progress=True) and self.time_lapse_in_progress and self.remaining_image_count > 0:
-            uid = self.get_stepper_uid()
+            self.next_trigger_position += self.steps_per_interval
 
-            if uid != None:
-                self.next_trigger_position += self.steps_per_interval
+            if self.remaining_image_count == 1:
+                target_position = self.slider_end_position.value()
+            else:
+                target_position = int(round(self.next_trigger_position))
 
-                if self.stepper_reversed:
-                    minimum_position = self.maximum_positions[uid]
-                    maximum_position = 0
-                    end_position = -self.slider_end_position.value()
+            if target_position >= 0 and target_position <= self.stepper_info.motion_range:
+                current_position = self.stepper.get_current_position() # FIXME: blocking getter
+                target_position = self.position_display_to_stepper(target_position)
+
+                if current_position != target_position:
+                    self.prepare_stepper_motion()
+                    self.stepper.set_target_position(target_position)
                 else:
-                    minimum_position = 0
-                    maximum_position = self.maximum_positions[uid]
-                    end_position = self.slider_end_position.value()
-
-                if self.remaining_image_count == 1:
-                    target_position = end_position
-                else:
-                    target_position = int(round(self.next_trigger_position))
-
-                if target_position >= minimum_position and target_position <= maximum_position:
-                    current_position = self.stepper.get_current_position() # FIXME: blocking getter
-
-                    if current_position != target_position:
-                        self.prepare_stepper_motion()
-                        self.stepper.set_target_position(target_position)
-                    else:
-                        self.time_lapse_trigger()
-                else:
-                    self.time_lapse_done()
+                    self.time_lapse_trigger()
+            else:
+                self.time_lapse_done()
 
     def time_lapse_trigger(self):
         if self.time_lapse_in_progress and self.remaining_image_count > 0:
@@ -998,10 +1018,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.log_append('Preparing time lapse')
 
             current_position = self.stepper.get_current_position() # FIXME: blocking getter
-            target_position = self.slider_start_position.value()
-
-            if self.stepper_reversed:
-                target_position = -target_position
+            target_position = self.position_display_to_stepper(self.slider_start_position.value())
 
             if current_position != target_position:
                 self.time_lapse_in_preparation = True
@@ -1010,36 +1027,35 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def time_lapse_start(self):
         if not self.test_in_progress and self.stepper_ready_for_motion():
-            self.log_append('Starting time lapse')
+            uid = self.get_stepper_uid()
 
-            start_position = self.slider_start_position.value()
-            end_position = self.slider_end_position.value()
+            if uid != None:
+                self.log_append('Starting time lapse')
 
-            if self.stepper_reversed:
-                start_position = -start_position
-                end_position = -end_position
+                start_position = self.slider_start_position.value()
+                end_position = self.slider_end_position.value()
 
-            self.time_lapse_in_progress = True
-            self.time_lapse_id += 1
-            self.first_time_lapse_trigger = True
-            self.image_count = self.spin_image_count.value()
-            self.remaining_image_count = self.spin_image_count.value()
-            self.interval = self.spin_interval.value()
-            self.steps_per_interval = float(end_position - start_position) / (self.remaining_image_count - 1)
-            self.next_trigger_position = float(start_position)
+                self.time_lapse_in_progress = True
+                self.time_lapse_id += 1
+                self.first_time_lapse_trigger = True
+                self.image_count = self.spin_image_count.value()
+                self.remaining_image_count = self.spin_image_count.value()
+                self.interval = self.spin_interval.value()
+                self.steps_per_interval = float(end_position - start_position) / (self.image_count - 1)
+                self.next_trigger_position = float(start_position)
 
-            self.time_lapse_status_timer.start()
+                self.time_lapse_status_timer.start()
 
-            current_position = self.stepper.get_current_position() # FIXME: blocking getter
-            target_position = int(round(self.next_trigger_position))
+                current_position = self.stepper.get_current_position() # FIXME: blocking getter
+                target_position = self.position_display_to_stepper(int(round(self.next_trigger_position)))
 
-            if current_position != target_position:
-                self.prepare_stepper_motion()
-                self.stepper.set_target_position(target_position)
-            else:
-                self.time_lapse_trigger()
+                if current_position != target_position:
+                    self.prepare_stepper_motion()
+                    self.stepper.set_target_position(target_position)
+                else:
+                    self.time_lapse_trigger()
 
-            self.update_ui_state()
+                self.update_ui_state()
 
     def time_lapse_abort(self):
         if self.time_lapse_in_progress:
