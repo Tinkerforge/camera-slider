@@ -598,7 +598,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.current_position_timer.stop()
 
         if self.stepper != None:
-            self.stepper.register_callback(BrickStepper.CALLBACK_POSITION_REACHED, None)
             self.stepper.register_callback(BrickStepper.CALLBACK_NEW_STATE, None)
 
         self.stepper = None
