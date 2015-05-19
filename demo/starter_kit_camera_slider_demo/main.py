@@ -641,7 +641,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                                            self.qtcb_stepper_new_state.emit)
 
             self.stepper.set_sync_rect(ENABLE_DECAY_CONTROL)
-            self.stepper.set_motor_current(1200) # FIXME
+            self.stepper.set_motor_current(850) # FIXME
 
             self.calibration_changed()
             self.velocity_changed()
