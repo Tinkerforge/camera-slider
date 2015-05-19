@@ -103,6 +103,7 @@ class SliderSpinSyncer(QObject):
         self.slider = slider
         self.spin = spin
         self.changed_callback = changed_callback
+        self.callback_blocked = False
 
         self.slider.valueChanged.connect(self.set_spinbox_from_slider_value)
         self.slider.sliderMoved.connect(self.set_spinbox_from_slider_position)
@@ -120,10 +121,11 @@ class SliderSpinSyncer(QObject):
         self.report_change()
 
     def report_change(self):
-        changed_callback = self.changed_callback
+        if not self.callback_blocked:
+            changed_callback = self.changed_callback
 
-        if changed_callback != None:
-            changed_callback()
+            if changed_callback != None:
+                changed_callback()
 
 class MainWindow(QMainWindow, Ui_MainWindow):
     qtcb_ipcon_enumerate = pyqtSignal(str, str, 'char', type((0,)), type((0,)), int, int)
