@@ -71,7 +71,7 @@ from starter_kit_camera_slider_demo.tinkerforge.brick_stepper import BrickSteppe
 from starter_kit_camera_slider_demo.tinkerforge.bricklet_io4 import BrickletIO4
 from starter_kit_camera_slider_demo.ui_mainwindow import Ui_MainWindow
 from starter_kit_camera_slider_demo.load_pixmap import load_pixmap
-from starter_kit_camera_slider_demo.config import DEMO_VERSION
+import starter_kit_camera_slider_demo.config as config
 
 NO_STEPPER_BRICK_FOUND = 'No Stepper Brick found'
 NO_IO4_BRICKLET_FOUND = 'No IO-4 Bricklet found'
@@ -136,7 +136,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         QMainWindow.__init__(self, parent)
 
         self.setupUi(self)
-        self.setWindowTitle('Starter Kit: Camera Slider Demo ' + DEMO_VERSION)
+        self.setWindowTitle('Starter Kit: Camera Slider Demo ' + config.DEMO_VERSION)
 
         signal.signal(signal.SIGINT, self.shutdown)
         signal.signal(signal.SIGTERM, self.shutdown)
@@ -197,6 +197,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # prepare connection tab
         self.button_connect.clicked.connect(self.connect_or_disconnect)
+
+        host_info = config.get_host_infos(config.HOST_INFO_COUNT)[0]
+
+        self.edit_host.setText(host_info.host)
+        self.spin_port.setValue(host_info.port)
 
         # prepare calibration tab
         self.combo_stepper_uid.currentIndexChanged.connect(self.stepper_uid_changed)
@@ -1140,6 +1145,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if connect_reason == IPConnection.CONNECT_REASON_REQUEST:
             self.ipcon.set_auto_reconnect(True)
             self.clear_all_uids()
+
+            # save host info
+            host_info = config.HostInfo()
+
+            host_info.host = self.edit_host.text()
+            host_info.port = self.spin_port.value()
+
+            config.set_host_infos([host_info])
 
         if connect_reason == IPConnection.CONNECT_REASON_AUTO_RECONNECT:
             self.log_append('Reconnected')
