@@ -252,7 +252,7 @@
       </widget>
       <widget class="QWidget" name="tab_motion">
        <attribute name="title">
-        <string>Motion</string>
+        <string>Linear Motion</string>
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_4">
         <item>
@@ -965,6 +965,22 @@
   <tabstop>spin_acceleration</tabstop>
   <tabstop>slider_deceleration</tabstop>
   <tabstop>spin_deceleration</tabstop>
+  <tabstop>slider_decay</tabstop>
+  <tabstop>spin_decay</tabstop>
+  <tabstop>edit_camera_trigger</tabstop>
+  <tabstop>button_time_lapse_test</tabstop>
+  <tabstop>spin_image_count</tabstop>
+  <tabstop>spin_initial_delay</tabstop>
+  <tabstop>spin_interval</tabstop>
+  <tabstop>slider_start_position</tabstop>
+  <tabstop>spin_start_position</tabstop>
+  <tabstop>slider_end_position</tabstop>
+  <tabstop>spin_end_position</tabstop>
+  <tabstop>button_time_lapse_prepare</tabstop>
+  <tabstop>button_time_lapse_start</tabstop>
+  <tabstop>button_time_lapse_abort</tabstop>
+  <tabstop>edit_log</tabstop>
+  <tabstop>button_log_clear</tabstop>
  </tabstops>
  <resources/>
  <connections/>
