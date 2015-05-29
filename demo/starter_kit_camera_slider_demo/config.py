@@ -32,7 +32,7 @@ class HostInfo(object):
     remember_secret = DEFAULT_REMEMBER_SECRET
 
 def get_host_info_strings(): return [DEFAULT_HOST_INFO]
-def set_host_info_strings(host_info_strings): pass
+def set_host_info_strings(strings): pass
 
 class StepperInfo(object):
     uid = None
@@ -45,7 +45,10 @@ class StepperInfo(object):
         return abs(self.maximum_position - self.minimum_position)
 
 def get_stepper_info_strings(): return []
-def set_stepper_info_strings(stepper_info_strings): pass
+def set_stepper_info_strings(strings): pass
+
+def get_camera_trigger(): return DEFAULT_CAMERA_TRIGGER
+def set_camera_trigger(camera_trigger): pass
 
 if sys.platform.startswith('linux') or sys.platform.startswith('freebsd'):
     from starter_kit_camera_slider_demo.config_linux import *

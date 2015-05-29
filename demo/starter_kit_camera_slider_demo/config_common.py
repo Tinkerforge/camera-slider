@@ -35,3 +35,5 @@ DEFAULT_REMEMBER_SECRET = False
 
 # host|port|use_authentication|remember_secret|secret
 DEFAULT_HOST_INFO = 'localhost|4223|0|0|'
+
+DEFAULT_CAMERA_TRIGGER = 'gphoto2 --capture-image'

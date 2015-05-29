@@ -101,3 +101,9 @@ def get_stepper_info_strings(max_count):
 
 def set_stepper_info_strings(strings):
     set_strings('Calibration', 'StepperInfo', strings)
+
+def get_camera_trigger():
+    return get_config_value('TimeLapse', 'CameraTrigger', DEFAULT_CAMERA_TRIGGER)
+
+def set_camera_trigger(camera_trigger):
+    set_config_value('TimeLapse', 'CameraTrigger', str(camera_trigger))

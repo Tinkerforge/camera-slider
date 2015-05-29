@@ -268,6 +268,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.time_lapse_status_timer.setInterval(100)
         self.time_lapse_status_timer.timeout.connect(self.update_time_lapse_status)
 
+        self.edit_camera_trigger.setText(config.get_camera_trigger())
+
         # prepare log tab
         self.button_log_clear.clicked.connect(self.log_clear)
 
@@ -571,6 +573,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def disconnect(self, ask_user):
         config.set_stepper_infos(self.stepper_infos.values())
+        config.set_camera_trigger(self.edit_camera_trigger.text())
 
         if self.stepper != None and (self.stepper_enabled or self.time_lapse_in_progress) and not self.disconnect_in_progress:
             if ask_user:
@@ -1022,6 +1025,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.stepper.set_target_position(target_position)
 
     def time_lapse_start(self):
+        config.set_camera_trigger(self.edit_camera_trigger.text())
+
         if not self.test_in_progress and self.stepper_ready_for_motion():
             uid = self.get_stepper_uid()
 

@@ -95,3 +95,9 @@ def get_stepper_info_strings(max_count):
 
 def set_stepper_info_strings(strings):
     set_strings('StepperInfo', strings)
+
+def get_camera_trigger():
+    return get_registry_value('CameraTrigger', DEFAULT_CAMERA_TRIGGER)
+
+def set_camera_trigger(camera_trigger):
+    set_registry_value('CameraTrigger', winreg.REG_SZ, str(camera_trigger))
