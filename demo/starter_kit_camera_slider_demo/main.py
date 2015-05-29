@@ -684,6 +684,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
                 self.stepper_infos[uid] = stepper_info
 
+                config.set_stepper_infos(self.stepper_infos.values())
+
             self.calibration_abort()
             self.calibration_changed()
 
