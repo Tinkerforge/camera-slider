@@ -779,10 +779,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.slider_start_position.setMaximum(self.stepper_info.motion_range)
             self.spin_start_position.setMaximum(self.stepper_info.motion_range)
             self.label_start_position_unit.setText('of {0}'.format(self.stepper_info.motion_range))
+            self.slider_start_position.setValue(0)
 
             self.slider_end_position.setMaximum(self.stepper_info.motion_range)
             self.spin_end_position.setMaximum(self.stepper_info.motion_range)
             self.label_end_position_unit.setText('of {0}'.format(self.stepper_info.motion_range))
+            self.slider_end_position.setValue(self.stepper_info.motion_range)
 
         self.velocity_changed()
         self.speed_ramping_changed()
