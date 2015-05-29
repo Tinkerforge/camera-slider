@@ -1248,7 +1248,11 @@ def main():
     application = Application(args)
 
     main_window = MainWindow()
-    main_window.show()
+
+    if '-fullscreen' in sys.argv:
+        main_window.showFullScreen()
+    else:
+        main_window.show()
 
     sys.exit(application.exec_())
 
