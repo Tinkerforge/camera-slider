@@ -257,6 +257,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.end_position_syncer = SliderSpinSyncer(self, self.slider_end_position, self.spin_end_position, None)
 
         self.slider_start_position.installEventFilter(self)
+        self.slider_end_position.installEventFilter(self)
 
         self.button_time_lapse_test.clicked.connect(self.time_lapse_test)
         self.button_time_lapse_prepare.clicked.connect(self.time_lapse_prepare)
