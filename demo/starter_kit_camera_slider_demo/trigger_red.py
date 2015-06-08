@@ -7,7 +7,7 @@ from tinkerforge.ip_connection import IPConnection
 from tinkerforge.brick_red import RED
 
 def check_error(error_code, *args):
-    if error_code != RED.ERROR_CODE_SUCCESS:
+    if error_code != 0:
         print('RED Brick error occurred: {0}'.format(error_code))
         sys.exit(1)
 
@@ -16,28 +16,14 @@ def check_error(error_code, *args):
 
     return args
 
-if __name__ == '__main__':
-    try:
-        host = sys.argv[1]
-        port = int(sys.argv[2])
-        uid = sys.argv[3]
-        identifier = sys.argv[4]
-        wait = int(sys.argv[5])
-    except:
-        print('usage: {0} <host> <port> <red-uid> <program-identifier> <wait-duration>'.format(sys.argv[0]))
-        sys.exit(1)
-
-    ipcon = IPConnection()
-    red = RED(uid, ipcon)
-
-    ipcon.connect(host, port)
-
+def start_program(red, identifier):
     session_id = check_error(*red.create_session(30))
     program_list_id = check_error(*red.get_programs(session_id))
     started = False
 
     for i in range(check_error(*red.get_list_length(program_list_id))):
         program_id, _ = check_error(*red.get_list_item(program_list_id, i, session_id))
+
         string_id = check_error(*red.get_program_identifier(program_id, session_id))
         string_length = check_error(*red.get_string_length(string_id))
         string_data = ''
@@ -59,7 +45,25 @@ if __name__ == '__main__':
     check_error(red.release_object(program_list_id, session_id))
     check_error(red.expire_session(session_id))
 
-    if started:
+    return started
+
+if __name__ == '__main__':
+    try:
+        host = sys.argv[1]
+        port = int(sys.argv[2])
+        uid = sys.argv[3]
+        identifier = sys.argv[4]
+        wait = int(sys.argv[5])
+    except:
+        print('usage: {0} <host> <port> <red-uid> <program-identifier> <wait-duration>'.format(sys.argv[0]))
+        sys.exit(1)
+
+    ipcon = IPConnection()
+    red = RED(uid, ipcon)
+
+    ipcon.connect(host, port)
+
+    if start_program(red, identifier):
         sleep(wait / 1000.0)
 
     ipcon.disconnect()
