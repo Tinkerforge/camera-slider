@@ -102,6 +102,8 @@ MOTOR_CURRENT = 850
 SYNC_RECT = True
 DECAY = 10000
 
+gphoto2_path = None
+
 class SliderSpinSyncer(QObject):
     def __init__(self, parent, slider, spin, changed_callback):
         QObject.__init__(self, parent)
@@ -258,6 +260,22 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.slider_start_position.installEventFilter(self)
         self.slider_end_position.installEventFilter(self)
+
+        if sys.platform == 'win32':
+            self.button_gphoto2_enable.setVisible(False)
+            self.button_gphoto2_disable.setVisible(False)
+        elif sys.platform == 'darwin':
+            self.button_zadig_start.setVisible(False)
+        else:
+            self.label_gphoto2_support.setVisible(False)
+            self.button_zadig_start.setVisible(False)
+            self.button_gphoto2_enable.setVisible(False)
+            self.button_gphoto2_disable.setVisible(False)
+            self.line_time_lapse.setVisible(False)
+
+        self.button_gphoto2_enable.clicked.connect(self.gphoto2_enable)
+        self.button_gphoto2_disable.clicked.connect(self.gphoto2_disable)
+        self.button_zadig_start.clicked.connect(self.zadig_start)
 
         self.button_time_lapse_test.clicked.connect(self.time_lapse_test)
         self.button_time_lapse_prepare.clicked.connect(self.time_lapse_prepare)
@@ -989,6 +1007,35 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.trigger_thread.daemon = True
             self.trigger_thread.start()
 
+    def gphoto2_enable(self):
+        if gphoto2_path != None:
+            self.log_append('Enabling gphoto2 support')
+
+            try:
+                output = subprocess.check_output('cd "{0}"; ./gphoto2-enable.sh'.format(gphoto2_path), stderr=subprocess.STDOUT, shell=True).decode('utf-8').strip()
+                self.log_append(u'gphoto2 support enabled: ' + output)
+            except subprocess.CalledProcessError as e:
+                self.log_append(u'gphoto2 support error {0}: {1}'.format(e.returncode, e.output.decode('utf-8').strip()))
+
+    def gphoto2_disable(self):
+        if gphoto2_path != None:
+            self.log_append('Disabling gphoto2 support')
+
+            try:
+                output = subprocess.check_output('cd "{0}"; echo y | ./gphoto2-disable.sh'.format(gphoto2_path), stderr=subprocess.STDOUT, shell=True).decode('utf-8').strip()
+                self.log_append(u'gphoto2 support disabled: ' + output)
+            except subprocess.CalledProcessError as e:
+                self.log_append(u'gphoto2 support error {0}: {1}'.format(e.returncode, e.output.decode('utf-8').strip()))
+
+    def zadig_start(self):
+        if gphoto2_path != None:
+            self.log_append('Starting Zadig')
+
+            try:
+                subprocess.Popen('cd "{0}" && zadig.exe'.format(gphoto2_path), stderr=subprocess.STDOUT, shell=True)
+            except subprocess.CalledProcessError as e:
+                self.log_appendc(u'Zadig error: {0}'.format(e.returncode))
+
     def time_lapse_test(self):
         if not self.test_in_progress and not self.time_lapse_in_progress:
             def test(camera_trigger):
@@ -1212,6 +1259,8 @@ def get_timestamp():
     return time.time() # FIXME: use monotonic clock here
 
 def main():
+    global gphoto2_path
+
     if sys.platform == 'win32':
         if hasattr(sys, 'frozen'):
             gphoto2_path = os.path.realpath(os.path.join(program_path, 'gphoto2'))

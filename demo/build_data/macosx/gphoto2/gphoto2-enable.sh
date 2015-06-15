@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# https://github.com/photron/mac-gphoto-enabler
+# https://github.com/mejedi/mac-gphoto-enabler
 
 # anti-sudo
 if [ "`id -nu`" = root ]; then
