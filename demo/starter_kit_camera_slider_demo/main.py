@@ -65,7 +65,9 @@ import signal
 import subprocess
 import threading
 from datetime import datetime
-import win32process
+
+if sys.platform == 'win32':
+    import win32process
 
 from PyQt4.QtCore import pyqtSignal, Qt, QObject, QTimer, QEvent
 from PyQt4.QtGui import QApplication, QMainWindow, QIcon, QMessageBox, QStyle, \
