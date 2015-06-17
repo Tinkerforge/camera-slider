@@ -65,6 +65,7 @@ import signal
 import subprocess
 import threading
 from datetime import datetime
+import win32process
 
 from PyQt4.QtCore import pyqtSignal, Qt, QObject, QTimer, QEvent
 from PyQt4.QtGui import QApplication, QMainWindow, QIcon, QMessageBox, QStyle, \
@@ -1031,10 +1032,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if gphoto2_path != None:
             self.log_append('Starting Zadig')
 
-            try:
-                subprocess.Popen('cd "{0}" && zadig.exe'.format(gphoto2_path), stderr=subprocess.STDOUT, shell=True)
-            except subprocess.CalledProcessError as e:
-                self.log_appendc(u'Zadig error: {0}'.format(e.returncode))
+            # FIXME: subprocess.Popen has problems when run under py2exe:
+            #
+            # http://www.py2exe.org/index.cgi/Py2ExeSubprocessInteractions
+            #
+            # instead of trying to deal with them, just avoid subprocess.Popen
+            # on Windows
+            win32process.CreateProcess(None, os.path.join(gphoto2_path, 'zadig.exe'), None, None,
+                                       False, 0, None, gphoto2_path, win32process.STARTUPINFO())
 
     def time_lapse_test(self):
         if not self.test_in_progress and not self.time_lapse_in_progress:
