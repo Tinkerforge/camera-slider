@@ -1023,7 +1023,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.log_append('Disabling gphoto2 support')
 
             try:
-                output = subprocess.check_output('cd "{0}"; echo y | ./gphoto2-disable.sh'.format(gphoto2_path), stderr=subprocess.STDOUT, shell=True).decode('utf-8').strip()
+                output = subprocess.check_output('cd "{0}"; echo n | ./gphoto2-disable.sh'.format(gphoto2_path), stderr=subprocess.STDOUT, shell=True).decode('utf-8').strip()
                 self.log_append(u'gphoto2 support disabled: ' + output)
             except subprocess.CalledProcessError as e:
                 self.log_append(u'gphoto2 support error {0}: {1}'.format(e.returncode, e.output.decode('utf-8').strip()))
