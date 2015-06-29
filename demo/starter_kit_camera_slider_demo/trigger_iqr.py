@@ -29,7 +29,7 @@ if __name__ == '__main__':
         sema.release()
 
     iqr.register_callback(iqr.CALLBACK_MONOFLOP_DONE, monoflop_done)
-    iqr.set_monoflop(1 << relay, 1 << relay, trigger)
+    iqr.set_monoflop(1 << pin, 1 << pin, trigger)
 
     sema.acquire()
     sleep(wait / 1000.0)
