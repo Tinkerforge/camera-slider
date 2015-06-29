@@ -12,7 +12,7 @@ if __name__ == '__main__':
         host = sys.argv[1]
         port = int(sys.argv[2])
         uid = sys.argv[3]
-        pin = int(sys.argv[4])
+        relay = int(sys.argv[4])
         trigger = int(sys.argv[5])
         wait = int(sys.argv[6])
     except:
@@ -29,7 +29,7 @@ if __name__ == '__main__':
         sema.release()
 
     iqr.register_callback(iqr.CALLBACK_MONOFLOP_DONE, monoflop_done)
-    iqr.set_monoflop(1 << pin, 1 << pin, trigger)
+    iqr.set_monoflop(1 << relay, 1 << relay, trigger)
 
     sema.acquire()
     sleep(wait / 1000.0)
