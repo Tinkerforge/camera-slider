@@ -1,26 +1,20 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2015-05-19.      #
+# This file was automatically generated on 2018-02-28.      #
 #                                                           #
-# Bindings Version 2.1.4                                    #
+# Python Bindings Version 2.1.16                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
 # to the generators git repository on tinkerforge.com       #
 #############################################################
 
-try:
-    from collections import namedtuple
-except ImportError:
-    try:
-        from .ip_connection import namedtuple
-    except ValueError:
-        from ip_connection import namedtuple
+from collections import namedtuple
 
 try:
-    from .ip_connection import Device, IPConnection, Error
+    from .ip_connection import Device, IPConnection, Error, create_char, create_char_list, create_string, create_chunk_data
 except ValueError:
-    from ip_connection import Device, IPConnection, Error
+    from ip_connection import Device, IPConnection, Error, create_char, create_char_list, create_string, create_chunk_data
 
 GetMonoflop = namedtuple('Monoflop', ['value', 'time', 'time_remaining'])
 GetIdentity = namedtuple('Identity', ['uid', 'connected_uid', 'position', 'hardware_version', 'firmware_version', 'device_identifier'])
@@ -32,8 +26,10 @@ class BrickletIndustrialQuadRelay(Device):
 
     DEVICE_IDENTIFIER = 225
     DEVICE_DISPLAY_NAME = 'Industrial Quad Relay Bricklet'
+    DEVICE_URL_PART = 'industrial_quad_relay' # internal
 
     CALLBACK_MONOFLOP_DONE = 8
+
 
     FUNCTION_SET_VALUE = 1
     FUNCTION_GET_VALUE = 2
@@ -62,32 +58,34 @@ class BrickletIndustrialQuadRelay(Device):
         self.response_expected[BrickletIndustrialQuadRelay.FUNCTION_SET_GROUP] = BrickletIndustrialQuadRelay.RESPONSE_EXPECTED_FALSE
         self.response_expected[BrickletIndustrialQuadRelay.FUNCTION_GET_GROUP] = BrickletIndustrialQuadRelay.RESPONSE_EXPECTED_ALWAYS_TRUE
         self.response_expected[BrickletIndustrialQuadRelay.FUNCTION_GET_AVAILABLE_FOR_GROUP] = BrickletIndustrialQuadRelay.RESPONSE_EXPECTED_ALWAYS_TRUE
-        self.response_expected[BrickletIndustrialQuadRelay.CALLBACK_MONOFLOP_DONE] = BrickletIndustrialQuadRelay.RESPONSE_EXPECTED_ALWAYS_FALSE
         self.response_expected[BrickletIndustrialQuadRelay.FUNCTION_SET_SELECTED_VALUES] = BrickletIndustrialQuadRelay.RESPONSE_EXPECTED_FALSE
         self.response_expected[BrickletIndustrialQuadRelay.FUNCTION_GET_IDENTITY] = BrickletIndustrialQuadRelay.RESPONSE_EXPECTED_ALWAYS_TRUE
 
         self.callback_formats[BrickletIndustrialQuadRelay.CALLBACK_MONOFLOP_DONE] = 'H H'
 
+
     def set_value(self, value_mask):
         """
         Sets the output value with a bitmask (16bit). A 1 in the bitmask means relay
         closed and a 0 means relay open.
-        
+
         For example: The value 3 or 0b0011 will close the relay of pins 0-1 and open
         the other pins.
-        
-        If no groups are used (see :func:`SetGroup`), the pins correspond to the
+
+        If no groups are used (see :func:`Set Group`), the pins correspond to the
         markings on the Quad Relay Bricklet.
-        
+
         If groups are used, the pins correspond to the element in the group.
         Element 1 in the group will get pins 0-3, element 2 pins 4-7, element 3
         pins 8-11 and element 4 pins 12-15.
         """
+        value_mask = int(value_mask)
+
         self.ipcon.send_request(self, BrickletIndustrialQuadRelay.FUNCTION_SET_VALUE, (value_mask,), 'H', '')
 
     def get_value(self):
         """
-        Returns the bitmask as set by :func:`SetValue`.
+        Returns the bitmask as set by :func:`Set Value`.
         """
         return self.ipcon.send_request(self, BrickletIndustrialQuadRelay.FUNCTION_GET_VALUE, (), '', 'H')
 
@@ -95,58 +93,66 @@ class BrickletIndustrialQuadRelay(Device):
         """
         Configures a monoflop of the pins specified by the first parameter
         bitmask.
-        
+
         The second parameter is a bitmask with the desired value of the specified
         pins. A 1 in the bitmask means relay closed and a 0 means relay open.
-        
+
         The third parameter indicates the time (in ms) that the pins should hold
         the value.
-        
+
         If this function is called with the parameters (9, 1, 1500) or
         (0b1001, 0b0001, 1500): Pin 0 will close and pin 3 will open. In 1.5s pin 0
         will open and pin 3 will close again.
-        
+
         A monoflop can be used as a fail-safe mechanism. For example: Lets assume you
         have a RS485 bus and a Quad Relay Bricklet connected to one of the slave
         stacks. You can now call this function every second, with a time parameter
         of two seconds and pin 0 closed. Pin 0 will be closed all the time. If now
         the RS485 connection is lost, then pin 0 will be opened in at most two seconds.
         """
+        selection_mask = int(selection_mask)
+        value_mask = int(value_mask)
+        time = int(time)
+
         self.ipcon.send_request(self, BrickletIndustrialQuadRelay.FUNCTION_SET_MONOFLOP, (selection_mask, value_mask, time), 'H H I', '')
 
     def get_monoflop(self, pin):
         """
         Returns (for the given pin) the current value and the time as set by
-        :func:`SetMonoflop` as well as the remaining time until the value flips.
-        
+        :func:`Set Monoflop` as well as the remaining time until the value flips.
+
         If the timer is not running currently, the remaining time will be returned
         as 0.
         """
+        pin = int(pin)
+
         return GetMonoflop(*self.ipcon.send_request(self, BrickletIndustrialQuadRelay.FUNCTION_GET_MONOFLOP, (pin,), 'B', 'H I I'))
 
     def set_group(self, group):
         """
         Sets a group of Quad Relay Bricklets that should work together. You can
-        find Bricklets that can be grouped together with :func:`GetAvailableForGroup`.
-        
+        find Bricklets that can be grouped together with :func:`Get Available For Group`.
+
         The group consists of 4 elements. Element 1 in the group will get pins 0-3,
         element 2 pins 4-7, element 3 pins 8-11 and element 4 pins 12-15.
-        
+
         Each element can either be one of the ports ('a' to 'd') or 'n' if it should
         not be used.
-        
+
         For example: If you have two Quad Relay Bricklets connected to port A and
         port B respectively, you could call with ``['a', 'b', 'n', 'n']``.
-        
+
         Now the pins on the Quad Relay on port A are assigned to 0-3 and the
         pins on the Quad Relay on port B are assigned to 4-7. It is now possible
-        to call :func:`SetValue` and control two Bricklets at the same time.
+        to call :func:`Set Value` and control two Bricklets at the same time.
         """
+        group = create_char_list(group)
+
         self.ipcon.send_request(self, BrickletIndustrialQuadRelay.FUNCTION_SET_GROUP, (group,), '4c', '')
 
     def get_group(self):
         """
-        Returns the group as set by :func:`SetGroup`
+        Returns the group as set by :func:`Set Group`
         """
         return self.ipcon.send_request(self, BrickletIndustrialQuadRelay.FUNCTION_GET_GROUP, (), '', '4c')
 
@@ -160,39 +166,45 @@ class BrickletIndustrialQuadRelay(Device):
 
     def set_selected_values(self, selection_mask, value_mask):
         """
-        Sets the output value with a bitmask, according to the selection mask. 
-        The bitmask is 16 bit long, *true* refers to a closed relay and 
+        Sets the output value with a bitmask, according to the selection mask.
+        The bitmask is 16 bit long, *true* refers to a closed relay and
         *false* refers to an open relay.
-        
+
         For example: The values (3, 1) or (0b0011, 0b0001) will close the relay of
         pin 0, open the relay of pin 1 and leave the others untouched.
-        
-        If no groups are used (see :func:`SetGroup`), the pins correspond to the
+
+        If no groups are used (see :func:`Set Group`), the pins correspond to the
         markings on the Quad Relay Bricklet.
-        
+
         If groups are used, the pins correspond to the element in the group.
         Element 1 in the group will get pins 0-3, element 2 pins 4-7, element 3
         pins 8-11 and element 4 pins 12-15.
         """
+        selection_mask = int(selection_mask)
+        value_mask = int(value_mask)
+
         self.ipcon.send_request(self, BrickletIndustrialQuadRelay.FUNCTION_SET_SELECTED_VALUES, (selection_mask, value_mask), 'H H', '')
 
     def get_identity(self):
         """
-        Returns the UID, the UID where the Bricklet is connected to, 
+        Returns the UID, the UID where the Bricklet is connected to,
         the position, the hardware and firmware version as well as the
         device identifier.
-        
+
         The position can be 'a', 'b', 'c' or 'd'.
-        
+
         The device identifier numbers can be found :ref:`here <device_identifier>`.
         |device_identifier_constant|
         """
         return GetIdentity(*self.ipcon.send_request(self, BrickletIndustrialQuadRelay.FUNCTION_GET_IDENTITY, (), '', '8s 8s c 3B 3B H'))
 
-    def register_callback(self, id, callback):
+    def register_callback(self, callback_id, function):
         """
-        Registers a callback with ID *id* to the function *callback*.
+        Registers the given *function* with the given *callback_id*.
         """
-        self.registered_callbacks[id] = callback
+        if function is None:
+            self.registered_callbacks.pop(callback_id, None)
+        else:
+            self.registered_callbacks[callback_id] = function
 
 IndustrialQuadRelay = BrickletIndustrialQuadRelay # for backward compatibility

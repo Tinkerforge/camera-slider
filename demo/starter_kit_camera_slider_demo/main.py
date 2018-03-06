@@ -32,6 +32,7 @@ sip.setapi('QVariant', 2)
 
 import os
 import sys
+import inspect
 
 def prepare_package(package_name):
     # from http://www.py2exe.org/index.cgi/WhereAmI
@@ -75,6 +76,7 @@ from PyQt4.QtGui import QApplication, QMainWindow, QIcon, QMessageBox, QStyle, \
 
 from starter_kit_camera_slider_demo.tinkerforge.ip_connection import IPConnection
 from starter_kit_camera_slider_demo.tinkerforge.brick_stepper import BrickStepper
+from starter_kit_camera_slider_demo.tinkerforge.brick_silent_stepper import BrickSilentStepper
 from starter_kit_camera_slider_demo.tinkerforge.bricklet_io4 import BrickletIO4
 from starter_kit_camera_slider_demo.ui_mainwindow import Ui_MainWindow
 from starter_kit_camera_slider_demo.load_pixmap import load_pixmap
@@ -87,6 +89,7 @@ DEVICE_IDENTIFIERS = {11: 'DC Brick',
                       13: 'Master Brick',
                       14: 'Servo Brick',
                       15: 'Stepper Brick',
+                      19: 'Silent Stepper Brick',
                       16: 'IMU Brick',
                       17: 'RED Brick'}
 
@@ -95,7 +98,6 @@ TAB_CALIBRATION = 1
 TAB_MOTION = 2
 TAB_TIME_LAPSE = 3
 
-CALIBRATION_VELOCITY = 2000
 CALIBRATION_ACCELERATION = 65535
 CALIBRATION_DECELERATION = 65535
 
@@ -155,6 +157,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         signal.signal(signal.SIGTERM, self.shutdown)
 
         self.devices = {} # uid -> (connected_uid, device_identifier)
+
+        self.calibration_velocity = 2000
 
         self.stepper = None
         self.stepper_info = None
@@ -396,7 +400,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         forward_calibration_down = self.button_calibration_forward.isDown()
         backward_calibration_down = self.button_calibration_backward.isDown()
 
-        self.combo_stepper_uid.setEnabled(stepper_uid != None and not self.calibration_in_progress and not self.stepper_enabled)
+        self.combo_stepper_uid.setEnabled(stepper_uid != None and not self.calibration_in_progress)
         self.check_automatic_power_control.setEnabled(stepper_uid != None and not self.calibration_in_progress and not self.stepper_driving)
         self.check_limit_switches.setEnabled(not self.calibration_in_progress and False) # FIXME
         self.label_io4_uid_title.setVisible(limit_switches)
@@ -648,7 +652,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.current_position_timer.stop()
 
         if self.stepper != None:
-            self.stepper.register_callback(BrickStepper.CALLBACK_NEW_STATE, None)
+            # The constant is read from class instance rather from the
+            # class itself to support both Stepper and Silent Stepper Bricks.
+            self.stepper.register_callback(self.stepper.CALLBACK_NEW_STATE, None)
 
         self.stepper = None
         self.stepper_info = None
@@ -657,12 +663,27 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         if uid != None:
             self.stepper = BrickStepper(uid, self.ipcon)
-            self.stepper.register_callback(BrickStepper.CALLBACK_NEW_STATE,
+            self.calibration_velocity = 2000
+
+            identity = self.stepper.get_identity()
+
+            if identity.device_identifier == BrickSilentStepper.DEVICE_IDENTIFIER:
+                self.stepper = BrickSilentStepper(uid, self.ipcon)
+                self.calibration_velocity = 64000
+
+            # The constant is read from class instance rather from the
+            # class itself to support both Stepper and Silent Stepper Bricks.
+            self.stepper.register_callback(self.stepper.CALLBACK_NEW_STATE,
                                            self.qtcb_stepper_new_state.emit)
 
             self.stepper.set_motor_current(MOTOR_CURRENT)
-            self.stepper.set_sync_rect(SYNC_RECT)
-            self.stepper.set_decay(DECAY)
+
+            # The follwing functions are only available in the Stepper Brick
+            # and not in the Silent Stepper Brick.
+            if hasattr(self.stepper, 'set_sync_rect') and inspect.ismethod(getattr(self.stepper, 'set_sync_rect')):
+                self.stepper.set_sync_rect(SYNC_RECT)
+            if hasattr(self.stepper, 'set_decay') and inspect.ismethod(getattr(self.stepper, 'set_decay')):
+                self.stepper.set_decay(DECAY)
 
             self.calibration_changed()
             self.velocity_changed()
@@ -728,7 +749,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def calibration_forward_pressed(self):
         if self.stepper != None and self.calibration_in_progress:
-            self.stepper.set_max_velocity(CALIBRATION_VELOCITY)
+            self.stepper.set_max_velocity(self.calibration_velocity)
             self.stepper.set_speed_ramping(CALIBRATION_ACCELERATION, CALIBRATION_DECELERATION)
             self.prepare_stepper_motion()
             self.stepper.drive_forward()
@@ -743,7 +764,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def calibration_backward_pressed(self):
         if self.stepper != None and self.calibration_in_progress:
-            self.stepper.set_max_velocity(CALIBRATION_VELOCITY)
+            self.stepper.set_max_velocity(self.calibration_velocity)
             self.stepper.set_speed_ramping(CALIBRATION_ACCELERATION, CALIBRATION_DECELERATION)
             self.prepare_stepper_motion()
             self.stepper.drive_backward()
@@ -1168,6 +1189,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
             if device_identifier == BrickStepper.DEVICE_IDENTIFIER:
                 add_item(self.combo_stepper_uid, NO_STEPPER_BRICK_FOUND)
+            elif device_identifier == BrickSilentStepper.DEVICE_IDENTIFIER:
+                add_item(self.combo_stepper_uid, NO_STEPPER_BRICK_FOUND)
             elif device_identifier == BrickletIO4.DEVICE_IDENTIFIER:
                 add_item(self.combo_io4_uid, NO_IO4_BRICKLET_FOUND)
 
@@ -1188,6 +1211,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                                 combo.setItemText(index, text)
 
                 update_items(self.combo_stepper_uid, BrickStepper.DEVICE_IDENTIFIER)
+                update_items(self.combo_stepper_uid, BrickSilentStepper.DEVICE_IDENTIFIER)
                 update_items(self.combo_io4_uid, BrickletIO4.DEVICE_IDENTIFIER)
         elif enumeration_type == IPConnection.ENUMERATION_TYPE_DISCONNECTED:
             # FIXME: abort calibration if stepper or io4 get disconnected
@@ -1253,7 +1277,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.update_ui_state(IPConnection.CONNECTION_STATE_PENDING)
 
     def cb_stepper_new_state(self, state_new, state_previous):
-        if self.stepper != None and state_new == BrickStepper.STATE_STOP and state_previous != BrickStepper.STATE_STOP:
+        # The constant is read from class instance rather from the
+        # class itself to support both Stepper and Silent Stepper Bricks.
+        if self.stepper != None and state_new == self.stepper.STATE_STOP and state_previous != self.stepper.STATE_STOP:
             self.stepper_motion_stopped()
 
 class Application(QApplication):
