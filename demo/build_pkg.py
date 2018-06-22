@@ -223,7 +223,7 @@ def build_windows_pkg():
                          '<<DEMO_UNDERSCORE_VERSION>>': DEMO_VERSION.replace('.', '_')})
 
     print('building NSIS installer')
-    system('"C:\\Program Files\\NSIS\\makensis.exe" dist\\nsis\\{0}_installer.nsi'.format(UNDERSCORE_NAME))
+    system('"C:\\Program Files (x86)\\NSIS\\makensis.exe" dist\\nsis\\{0}_installer.nsi'.format(UNDERSCORE_NAME))
     installer = '{0}_windows_{1}.exe'.format(UNDERSCORE_NAME, DEMO_VERSION.replace('.', '_'))
 
     if os.path.exists(installer):
@@ -231,8 +231,11 @@ def build_windows_pkg():
 
     shutil.move(os.path.join(dist_path, 'nsis', installer), root_path)
 
-    if os.path.exists('X:\\sign.bat'):
-        system('X:\\sign.bat ' + installer)
+    print('signing NSIS installer')
+    system('signtool.exe sign /v /tr http://rfc3161timestamp.globalsign.com/advanced /td sha256 /n "Tinkerforge GmbH" ' + installer)
+
+    print('verifying signature')
+    system('signtool.exe verify /v /pa ' + installer)
 
 
 def build_linux_pkg():
@@ -281,6 +284,10 @@ def build_linux_pkg():
     print('changing directory modes to 0755')
     system('find dist/linux -type d -exec chmod 0755 {} \;')
 
+    print('changing file modes')
+    system('find dist/linux -type f -perm 664 -exec chmod 0644 {} \;')
+    system('find dist/linux -type f -perm 775 -exec chmod 0755 {} \;')
+
     print('changing owner to root')
     system('sudo chown -R root:root dist/linux')
 
@@ -288,10 +295,13 @@ def build_linux_pkg():
     system('dpkg -b dist/linux {0}-{1}_all.deb'.format(UNDERSCORE_NAME.replace('_', '-'), DEMO_VERSION))
 
     print('changing owner back to original user')
-    system('sudo chown -R `logname`:`logname` dist/linux')
+    system('sudo chown -R ${USER}:${USER} dist/linux')
 
-    #print('checking Debian package')
-    #system('lintian --pedantic {0}-{1}_all.deb'.format(UNDERSCORE_NAME.replace('_', '-'), DEMO_VERSION))
+    if os.path.exists('/usr/bin/lintian'):
+        print('checking Debian package')
+        system('lintian --pedantic {0}-{1}_all.deb'.format(UNDERSCORE_NAME.replace('_', '-'), DEMO_VERSION))
+    else:
+        print('skipping lintian check')
 
 
 # run 'python build_pkg.py' to build the windows/linux/macos package
