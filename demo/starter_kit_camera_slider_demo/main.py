@@ -32,7 +32,6 @@ sip.setapi('QVariant', 2)
 
 import os
 import sys
-import inspect
 
 def prepare_package(package_name):
     # from http://www.py2exe.org/index.cgi/WhereAmI
@@ -680,9 +679,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
             # The follwing functions are only available in the Stepper Brick
             # and not in the Silent Stepper Brick.
-            if hasattr(self.stepper, 'set_sync_rect') and inspect.ismethod(getattr(self.stepper, 'set_sync_rect')):
+            if hasattr(self.stepper, 'set_sync_rect'):
                 self.stepper.set_sync_rect(SYNC_RECT)
-            if hasattr(self.stepper, 'set_decay') and inspect.ismethod(getattr(self.stepper, 'set_decay')):
+            if hasattr(self.stepper, 'set_decay'):
                 self.stepper.set_decay(DECAY)
 
             self.calibration_changed()
