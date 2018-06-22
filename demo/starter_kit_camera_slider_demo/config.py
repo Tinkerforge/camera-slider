@@ -53,7 +53,7 @@ def set_camera_trigger(camera_trigger): pass
 if sys.platform.startswith('linux') or sys.platform.startswith('freebsd'):
     from starter_kit_camera_slider_demo.config_linux import *
 elif sys.platform == 'darwin':
-    from starter_kit_camera_slider_demo.config_macosx import *
+    from starter_kit_camera_slider_demo.config_macos import *
 elif sys.platform == 'win32':
     from starter_kit_camera_slider_demo.config_windows import *
 else:

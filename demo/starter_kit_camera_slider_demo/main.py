@@ -1307,7 +1307,7 @@ def main():
         if hasattr(sys, 'frozen'):
             gphoto2_path = os.path.realpath(os.path.join(program_path, '..', 'Resources', 'gphoto2'))
         else:
-            gphoto2_path = os.path.realpath(os.path.join(program_path, '..', 'build_data', 'macosx', 'gphoto2'))
+            gphoto2_path = os.path.realpath(os.path.join(program_path, '..', 'build_data', 'macos', 'gphoto2'))
 
         os.environ['PATH'] = ':'.join([gphoto2_path] + os.environ.get('PATH', '').split(':'))
         os.environ['CAMLIBS'] = os.path.join(gphoto2_path, 'camlibs')
@@ -1319,11 +1319,11 @@ def main():
         args += ['-style', 'windowsxp']
 
     if sys.platform == 'darwin':
-        # fix OSX 10.9 font
+        # fix macOS 10.9 font
         # http://successfulsoftware.net/2013/10/23/fixing-qt-4-for-mac-os-x-10-9-mavericks/
         # https://bugreports.qt-project.org/browse/QTBUG-32789
         QFont.insertSubstitution('.Lucida Grande UI', 'Lucida Grande')
-        # fix OSX 10.10 font
+        # fix macOS 10.10 font
         # https://bugreports.qt-project.org/browse/QTBUG-40833
         QFont.insertSubstitution('.Helvetica Neue DeskInterface', 'Helvetica Neue')
 
