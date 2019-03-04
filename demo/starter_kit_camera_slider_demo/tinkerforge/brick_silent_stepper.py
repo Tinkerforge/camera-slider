@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #############################################################
-# This file was automatically generated on 2018-02-28.      #
+# This file was automatically generated on 2019-02-25.      #
 #                                                           #
-# Python Bindings Version 2.1.16                            #
+# Python Bindings Version 2.1.21                            #
 #                                                           #
 # If you have a bugfix for this file and want to commit it, #
 # please fix the bug in the generator. You can find a link  #
@@ -162,7 +162,7 @@ class BrickSilentStepper(Device):
         """
         Device.__init__(self, uid, ipcon)
 
-        self.api_version = (2, 0, 0)
+        self.api_version = (2, 0, 1)
 
         self.response_expected[BrickSilentStepper.FUNCTION_SET_MAX_VELOCITY] = BrickSilentStepper.RESPONSE_EXPECTED_FALSE
         self.response_expected[BrickSilentStepper.FUNCTION_GET_MAX_VELOCITY] = BrickSilentStepper.RESPONSE_EXPECTED_ALWAYS_TRUE
@@ -420,7 +420,7 @@ class BrickSilentStepper(Device):
     def get_external_input_voltage(self):
         """
         Returns the external input voltage in mV. The external input voltage is
-        given via the black power input connector on the Slient Stepper Brick.
+        given via the black power input connector on the Silent Stepper Brick.
 
         If there is an external input voltage and a stack input voltage, the motor
         will be driven by the external input voltage. If there is only a stack
@@ -791,7 +791,7 @@ class BrickSilentStepper(Device):
     def set_minimum_voltage(self, voltage):
         """
         Sets the minimum voltage in mV, below which the :cb:`Under Voltage` callback
-        is triggered. The minimum possible value that works with the Slient Stepper
+        is triggered. The minimum possible value that works with the Silent Stepper
         Brick is 8V.
         You can use this function to detect the discharge of a battery that is used
         to drive the stepper motor. If you have a fixed power supply, you likely do
@@ -869,7 +869,7 @@ class BrickSilentStepper(Device):
         enabled, the Brick will try to adapt the baudrate for the communication
         between Bricks and Bricklets according to the amount of data that is transferred.
 
-        The baudrate will be increased exponetially if lots of data is send/receieved and
+        The baudrate will be increased exponentially if lots of data is send/received and
         decreased linearly if little data is send/received.
 
         This lowers the baudrate in applications where little data is transferred (e.g.
@@ -929,7 +929,7 @@ class BrickSilentStepper(Device):
         If the dynamic baudrate feature is enabled, the baudrate set by this
         function corresponds to the maximum baudrate (see :func:`Set SPITFP Baudrate Config`).
 
-        Regulatory testing is done with the default baudrate. If CE compatability
+        Regulatory testing is done with the default baudrate. If CE compatibility
         or similar is necessary in you applications we recommend to not change
         the baudrate.
 
@@ -956,7 +956,7 @@ class BrickSilentStepper(Device):
 
         * ACK checksum errors,
         * message checksum errors,
-        * frameing errors and
+        * framing errors and
         * overflow errors.
 
         The errors counts are for errors that occur on the Brick side. All
