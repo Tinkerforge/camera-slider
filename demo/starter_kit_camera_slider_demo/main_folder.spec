@@ -74,7 +74,14 @@ patterns = ['qt5qml', 'qt5quick', 'libglesv2', 'libcrypto', 'qt5network', 'qt5db
 utils = PyinstallerUtils(['starter', 'kit', 'camera', 'slider', 'demo'], DEMO_VERSION)
 utils.prepare(os.path.join(utils.root_path, '..'), 'build_ui.py')
 
-a = Analysis(['main.py'], pathex=utils.pathex, excludes=excludes)
+if utils.windows:
+    datas = [(os.path.join(utils.windows_build_data_path, 'gphoto2'), 'gphoto2')]
+elif utils.macos:
+    datas = [(os.path.join(utils.mac_build_data_path, 'gphoto2'), 'gphoto2')]
+else:
+    datas = []
+
+a = Analysis(['main.py'], pathex=utils.pathex, excludes=excludes, datas=datas)
 
 binaries = utils.strip_binaries(a.binaries, patterns)
 
