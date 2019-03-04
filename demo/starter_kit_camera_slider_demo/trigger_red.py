@@ -63,7 +63,9 @@ if __name__ == '__main__':
 
     ipcon.connect(host, port)
 
-    if start_program(red, identifier):
+    started = start_program(red, identifier)
+
+    if started:
         sleep(wait / 1000.0)
 
     ipcon.disconnect()
