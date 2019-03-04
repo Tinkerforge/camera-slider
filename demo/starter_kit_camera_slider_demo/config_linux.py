@@ -24,10 +24,7 @@ Boston, MA 02111-1307, USA.
 from starter_kit_camera_slider_demo.config_common import *
 import os
 
-try:
-    import configparser
-except:
-    import ConfigParser as configparser # Python 2 fallback
+import configparser
 
 XDG_CONFIG_HOME = os.getenv('XDG_CONFIG_HOME')
 
@@ -59,7 +56,7 @@ def set_config_value(section, option, value):
     if not os.path.exists(CONFIG_DIRNAME):
         os.makedirs(CONFIG_DIRNAME)
 
-    with open(CONFIG_FILENAME, 'wb') as f:
+    with open(CONFIG_FILENAME, 'w') as f:
         scp.write(f)
 
 def get_strings(category, prefix, max_count):

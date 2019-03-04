@@ -26,36 +26,31 @@ Boston, MA 02111-1307, USA.
 # can overflow between the minimum and maximum position. the code does not deal
 # with this (yet)
 
-import sip
-sip.setapi('QString', 2)
-sip.setapi('QVariant', 2)
-
 import os
 import sys
 
 def prepare_package(package_name):
     # from http://www.py2exe.org/index.cgi/WhereAmI
     if hasattr(sys, 'frozen'):
-        program_path = os.path.dirname(os.path.realpath(unicode(sys.executable, sys.getfilesystemencoding())))
+        program_path = os.path.dirname(os.path.realpath(sys.executable))
     else:
-        program_path = os.path.dirname(os.path.realpath(unicode(__file__, sys.getfilesystemencoding())))
+        program_path = os.path.dirname(os.path.realpath(__file__))
 
     # add program_path so OpenGL is properly imported
     sys.path.insert(0, program_path)
 
     # allow the program to be directly started by calling 'main.py'
     # without '<package_name>' being in the path already
-    if not package_name in sys.modules:
+    if package_name not in sys.modules:
         head, tail = os.path.split(program_path)
 
-        if not head in sys.path:
+        if head not in sys.path:
             sys.path.insert(0, head)
 
         if not hasattr(sys, 'frozen'):
             # load and inject in modules list, this allows to have the source in a
             # directory named differently than '<package_name>'
-            sys.modules[package_name] = __import__(tail, globals(), locals(), [], -1)
-
+            sys.modules[package_name] = __import__(tail, globals(), locals())
     return program_path
 
 program_path = prepare_package('starter_kit_camera_slider_demo')
@@ -69,9 +64,10 @@ from datetime import datetime
 if sys.platform == 'win32':
     import win32process
 
-from PyQt4.QtCore import pyqtSignal, Qt, QObject, QTimer, QEvent
-from PyQt4.QtGui import QApplication, QMainWindow, QIcon, QMessageBox, QStyle, \
-                        QStyleOptionSlider, QSlider, QFont
+from PyQt5.QtCore import pyqtSignal, Qt, QObject, QTimer, QEvent
+from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox, QStyle, \
+                        QStyleOptionSlider, QSlider
+from PyQt5.QtGui import QIcon, QFont
 
 from starter_kit_camera_slider_demo.tinkerforge.ip_connection import IPConnection
 from starter_kit_camera_slider_demo.tinkerforge.brick_stepper import BrickStepper
@@ -140,7 +136,7 @@ class SliderSpinSyncer(QObject):
                 changed_callback()
 
 class MainWindow(QMainWindow, Ui_MainWindow):
-    qtcb_ipcon_enumerate = pyqtSignal(str, str, 'char', type((0,)), type((0,)), int, int)
+    qtcb_ipcon_enumerate = pyqtSignal(str, str, str, type((0,)), type((0,)), int, int)
     qtcb_ipcon_connected = pyqtSignal(int)
     qtcb_ipcon_disconnected = pyqtSignal(int)
     qtcb_stepper_new_state = pyqtSignal(int, int)
@@ -1060,8 +1056,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             #
             # instead of trying to deal with them, just avoid subprocess.Popen
             # on Windows
-            win32process.CreateProcess(None, os.path.join(gphoto2_path, 'zadig.exe'), None, None,
-                                       False, 0, None, gphoto2_path, win32process.STARTUPINFO())
+            #win32process.CreateProcess(None, os.path.join(gphoto2_path, 'zadig.exe'), None, None,
+            #                           False, 0, None, gphoto2_path, win32process.STARTUPINFO())
+
+            subprocess.call(os.path.join(gphoto2_path, 'zadig.exe'))
 
     def time_lapse_test(self):
         if not self.test_in_progress and not self.time_lapse_in_progress:
@@ -1313,18 +1311,6 @@ def main():
         os.environ['IOLIBS'] = os.path.join(gphoto2_path, 'iolibs')
 
     args = sys.argv
-
-    if sys.platform == 'win32':
-        args += ['-style', 'windowsxp']
-
-    if sys.platform == 'darwin':
-        # fix macOS 10.9 font
-        # http://successfulsoftware.net/2013/10/23/fixing-qt-4-for-mac-os-x-10-9-mavericks/
-        # https://bugreports.qt-project.org/browse/QTBUG-32789
-        QFont.insertSubstitution('.Lucida Grande UI', 'Lucida Grande')
-        # fix macOS 10.10 font
-        # https://bugreports.qt-project.org/browse/QTBUG-40833
-        QFont.insertSubstitution('.Helvetica Neue DeskInterface', 'Helvetica Neue')
 
     application = Application(args)
 

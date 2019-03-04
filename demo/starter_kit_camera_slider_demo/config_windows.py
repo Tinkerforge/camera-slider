@@ -23,10 +23,7 @@ Boston, MA 02111-1307, USA.
 
 from starter_kit_camera_slider_demo.config_common import *
 
-try:
-    import winreg
-except:
-    import _winreg as winreg # Python 2 fallback
+import winreg
 
 KEY_NAME = 'Software\\Tinkerforge\\Starter Kit Camera Slider Demo'
 
