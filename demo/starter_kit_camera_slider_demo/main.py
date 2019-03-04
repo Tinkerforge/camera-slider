@@ -1003,13 +1003,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     else:
                         self.next_trigger_time += self.interval
 
-                    self.log_append_async(u'Triggering camera for image {0} of {1}: {2}'.format(image_index, self.image_count, camera_trigger))
+                    self.log_append_async('Triggering camera for image {0} of {1}: {2}'.format(image_index, self.image_count, camera_trigger))
 
                     try:
                         output = subprocess.check_output(camera_trigger, stderr=subprocess.STDOUT, shell=True).decode('utf-8').strip()
-                        self.log_append_async(u'Camera trigger output: ' + output)
+                        self.log_append_async('Camera trigger output: ' + output)
                     except subprocess.CalledProcessError as e:
-                        self.log_append_async(u'Camera trigger error {0}: {1}'.format(e.returncode, e.output.decode('utf-8').strip()))
+                        self.log_append_async('Camera trigger error {0}: {1}'.format(e.returncode, e.output.decode('utf-8').strip()))
 
                     if not self.time_lapse_in_progress or \
                        time_lapse_id != self.time_lapse_id or \
@@ -1032,9 +1032,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
             try:
                 output = subprocess.check_output('cd "{0}"; ./gphoto2-enable.sh'.format(gphoto2_path), stderr=subprocess.STDOUT, shell=True).decode('utf-8').strip()
-                self.log_append(u'gphoto2 support enabled: ' + output)
+                self.log_append('gphoto2 support enabled: ' + output)
             except subprocess.CalledProcessError as e:
-                self.log_append(u'gphoto2 support error {0}: {1}'.format(e.returncode, e.output.decode('utf-8').strip()))
+                self.log_append('gphoto2 support error {0}: {1}'.format(e.returncode, e.output.decode('utf-8').strip()))
 
     def gphoto2_disable(self):
         if gphoto2_path != None:
@@ -1042,9 +1042,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
             try:
                 output = subprocess.check_output('cd "{0}"; echo n | ./gphoto2-disable.sh'.format(gphoto2_path), stderr=subprocess.STDOUT, shell=True).decode('utf-8').strip()
-                self.log_append(u'gphoto2 support disabled: ' + output)
+                self.log_append('gphoto2 support disabled: ' + output)
             except subprocess.CalledProcessError as e:
-                self.log_append(u'gphoto2 support error {0}: {1}'.format(e.returncode, e.output.decode('utf-8').strip()))
+                self.log_append('gphoto2 support error {0}: {1}'.format(e.returncode, e.output.decode('utf-8').strip()))
 
     def zadig_start(self):
         if gphoto2_path != None:
@@ -1064,13 +1064,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def time_lapse_test(self):
         if not self.test_in_progress and not self.time_lapse_in_progress:
             def test(camera_trigger):
-                self.log_append_async(u'Testing camera trigger: {0}'.format(camera_trigger))
+                self.log_append_async('Testing camera trigger: {0}'.format(camera_trigger))
 
                 try:
                     output = subprocess.check_output(camera_trigger, stderr=subprocess.STDOUT, shell=True).decode('utf-8').strip()
-                    self.log_append_async(u'Camera trigger output: ' + output)
+                    self.log_append_async('Camera trigger output: ' + output)
                 except subprocess.CalledProcessError as e:
-                    self.log_append_async(u'Camera trigger error {0}: {1}'.format(e.returncode, e.output.decode('utf-8').strip()))
+                    self.log_append_async('Camera trigger error {0}: {1}'.format(e.returncode, e.output.decode('utf-8').strip()))
 
                 self.log_append_async('Camera trigger test done')
 
