@@ -26,6 +26,7 @@ Boston, MA 02111-1307, USA.
 # can overflow between the minimum and maximum position. the code does not deal
 # with this (yet)
 
+import ctypes
 import os
 import sys
 
@@ -60,9 +61,6 @@ import signal
 import subprocess
 import threading
 from datetime import datetime
-
-if sys.platform == 'win32':
-    import win32process
 
 from PyQt5.QtCore import pyqtSignal, Qt, QObject, QTimer, QEvent
 from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox, QStyle, \
@@ -1050,16 +1048,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if gphoto2_path != None:
             self.log_append('Starting Zadig')
 
-            # FIXME: subprocess.Popen has problems when run under py2exe:
-            #
-            # http://www.py2exe.org/index.cgi/Py2ExeSubprocessInteractions
-            #
-            # instead of trying to deal with them, just avoid subprocess.Popen
-            # on Windows
-            #win32process.CreateProcess(None, os.path.join(gphoto2_path, 'zadig.exe'), None, None,
-            #                           False, 0, None, gphoto2_path, win32process.STARTUPINFO())
-
-            subprocess.call(os.path.join(gphoto2_path, 'zadig.exe'))
+            # Zadig needs UAC elevation.
+            ctypes.windll.shell32.ShellExecuteW(None, "runas", os.path.join(gphoto2_path, 'zadig.exe'), "", None, 1)
 
     def time_lapse_test(self):
         if not self.test_in_progress and not self.time_lapse_in_progress:
