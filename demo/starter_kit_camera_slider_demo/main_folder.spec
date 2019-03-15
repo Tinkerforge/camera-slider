@@ -6,6 +6,8 @@ sys.path.append('..')
 from starter_kit_camera_slider_demo.pyinstaller_utils import *
 from starter_kit_camera_slider_demo.config import DEMO_VERSION
 
+utils = PyinstallerUtils(['starter', 'kit', 'camera', 'slider', 'demo'], DEMO_VERSION)
+utils.prepare(os.path.join(utils.root_path, '..'), 'build_ui.py')
 
 excludes = ['wx', 'gtk+', '_gtkagg', 'gtk', 'gdk', 'gtk2', 'gtk3', 'cairo', 'wayland', 'xinerama', 'share', 'icons', 'atk', 'pango', 'pil', 'PIL',
             '_tkagg',
@@ -69,9 +71,6 @@ excludes = ['wx', 'gtk+', '_gtkagg', 'gtk', 'gdk', 'gtk2', 'gtk3', 'cairo', 'way
 patterns = ['qt5qml', 'qt5quick', 'libglesv2', 'libcrypto', 'qt5network', 'qt5dbus',
             'qt5svg', 'qt5websockets', 'd3dcompiler', 'libegl', 'opengl32sw', 'qwebp',
             'qjpeg', 'qminimal', 'qoffscreen', 'qwebgl']
-
-utils = PyinstallerUtils(['starter', 'kit', 'camera', 'slider', 'demo'], DEMO_VERSION)
-utils.prepare(os.path.join(utils.root_path, '..'), 'build_ui.py')
 
 if utils.windows:
     datas = [(os.path.join(utils.windows_build_data_path, 'gphoto2'), 'gphoto2')]
