@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Starter Kit: Blinkenlights Demo
@@ -26,10 +26,11 @@ Boston, MA 02111-1307, USA.
 
 # Windows:
 #   dependencies:
-#       pythonxy (2.6)
-#       py2exe
+#       python
+#       pyinstaller
+#       PyQt5
 #       nsis
-#       win redistributables vcredist under winxp
+#       universal CRT
 
 import sys
 if (sys.hexversion & 0xFF000000) != 0x03000000:
