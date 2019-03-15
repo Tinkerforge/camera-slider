@@ -2,7 +2,7 @@
 
 import os
 import sys
-sys.path.append('..')
+sys.path.insert(0, '..') # Ensure to use the demo source, not an installed version
 from starter_kit_camera_slider_demo.pyinstaller_utils import *
 from starter_kit_camera_slider_demo.config import DEMO_VERSION
 
