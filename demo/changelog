@@ -3,3 +3,6 @@
 
 2018-03-06: 1.0.1 (6e9233f)
 - Add support for Silent Stepper Brick
+
+<unknown>: 1.1.0 (<unknown>)
+- Port to Python 3 and PyQt 5
