@@ -95,6 +95,9 @@ def build_linux_pkg():
     if os.path.exists(dist_path):
         shutil.rmtree(dist_path)
 
+    if os.path.exists(egg_info_path):
+        shutil.rmtree(egg_info_path)
+
     print('calling build_ui.py release')
     system(['python3', 'build_ui.py'])
 
@@ -137,14 +140,14 @@ def build_linux_pkg():
     system(['sudo', 'chown', '-R', 'root:root', 'dist/linux'])
 
     print('building Debian package')
-    system(['dpkg', '-b', 'dist/linux', '{0}-{1}_all.deb'.format(UNDERSCORE_NAME, DEMO_VERSION)])
+    system(['dpkg', '-b', 'dist/linux', '{0}-{1}_all.deb'.format(UNDERSCORE_NAME.replace('_', '-'), DEMO_VERSION)])
 
     print('changing owner back to original user')
     system(['sudo', 'chown', '-R', '{}:{}'.format(user, group), 'dist/linux'])
 
     if os.path.exists('/usr/bin/lintian'):
         print('checking Debian package')
-        system(['lintian', '--pedantic', '{0}-{1}_all.deb'.format(UNDERSCORE_NAME, DEMO_VERSION)])
+        system(['lintian', '--pedantic', '{0}-{1}_all.deb'.format(UNDERSCORE_NAME.replace('_', '-'), DEMO_VERSION)])
     else:
         print('skipping lintian check')
 
@@ -167,7 +170,7 @@ if __name__ == '__main__':
 
         root_path = os.getcwd()
         os.chdir(os.path.join(root_path, UNDERSCORE_NAME))
-        system(['pyinstaller', '--distpath', os.path.join('..', 'dist'), '--workpath', os.path.join('..', 'build'), 'main_folder.spec', '--'] + sys.argv)
+        system(['pyinstaller', '--distpath', '../dist', '--workpath', '../build', 'main_folder.spec', '--'] + sys.argv)
         os.chdir(root_path)
     else:
         print('error: unsupported platform: ' + sys.platform)
