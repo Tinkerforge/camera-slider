@@ -26,9 +26,13 @@ Boston, MA 02111-1307, USA.
 # can overflow between the minimum and maximum position. the code does not deal
 # with this (yet)
 
+import sys
+if (sys.hexversion & 0xFF000000) != 0x03000000:
+    print('Python 3.x required')
+    sys.exit(1)
+
 import ctypes
 import os
-import sys
 
 def prepare_package(package_name):
     # from http://www.py2exe.org/index.cgi/WhereAmI
