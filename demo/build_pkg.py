@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Starter Kit: Blinkenlights Demo
+Starter Kit: Camera Slider Demo
 Copyright (C) 2013-2015 Matthias Bolte <matthias@tinkerforge.com>
 Copyright (C) 2011 Olaf Lüke <olaf@tinkerforge.com>
 Copyright (C) 2011 Bastian Nordmeyer <bastian@tinkerforge.com>
 
-build_pkg.py: Package builder for Starter Kit: Blinkenlights Demo
+build_pkg.py: Package builder for Starter Kit: Camera Slider Demo
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
