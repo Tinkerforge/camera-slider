@@ -21,9 +21,10 @@ Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 Boston, MA 02111-1307, USA.
 """
 
-from starter_kit_camera_slider_demo.config_common import *
-
+import logging
 import winreg
+
+from starter_kit_camera_slider_demo.config_common import *
 
 KEY_NAME = 'Software\\Tinkerforge\\Starter Kit Camera Slider Demo'
 

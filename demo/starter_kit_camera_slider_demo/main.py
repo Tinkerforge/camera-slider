@@ -1275,7 +1275,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
 class Application(QApplication):
     def __init__(self, args):
-        super(QApplication, self).__init__(args)
+        super().__init__(args)
 
         self.setWindowIcon(QIcon(load_pixmap('starter_kit_camera_slider_demo-icon.png')))
 
