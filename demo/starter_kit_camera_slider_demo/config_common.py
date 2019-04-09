@@ -21,7 +21,7 @@ Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 Boston, MA 02111-1307, USA.
 """
 
-DEMO_VERSION = '1.1.0'
+DEMO_VERSION = '1.1.1'
 
 HOST_INFO_COUNT = 1
 STEPPER_INFO_COUNT = 100

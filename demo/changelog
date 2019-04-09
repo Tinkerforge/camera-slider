@@ -4,6 +4,9 @@
 2018-03-06: 1.0.1 (6e9233f)
 - Add support for Silent Stepper Brick
 
-2019-03-18: 1.1.0 (<unknown>)
-- Port to Python 3 and PyQt 5
+2019-03-18: 1.1.0 (bc90540)
+- Port to Python 3 and PyQt 5 (macOS 10.11 or Windows 7 required)
 - Install start menu link for all users on Windows
+
+2019-04-09: 1.1.1 (<unknown>)
+- Add minimum macOS and Windows version checks
