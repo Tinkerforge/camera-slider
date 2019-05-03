@@ -7,7 +7,7 @@ from starter_kit_camera_slider_demo.pyinstaller_utils import *
 from starter_kit_camera_slider_demo.config import DEMO_VERSION
 
 utils = PyinstallerUtils(['starter', 'kit', 'camera', 'slider', 'demo'], DEMO_VERSION)
-utils.prepare(os.path.join(utils.root_path, '..'), 'build_ui.py')
+utils.prepare(os.path.join(utils.root_path, '..'))
 
 excludes = ['wx', 'gtk+', '_gtkagg', 'gtk', 'gdk', 'gtk2', 'gtk3', 'cairo', 'wayland', 'xinerama', 'share', 'icons', 'atk', 'pango', 'pil', 'PIL',
             '_tkagg',
@@ -72,10 +72,8 @@ patterns = ['qt5qml', 'qt5quick', 'libglesv2', 'libcrypto', 'qt5network', 'qt5db
             'qt5svg', 'qt5websockets', 'd3dcompiler', 'libegl', 'opengl32sw', 'qwebp',
             'qjpeg', 'qminimal', 'qoffscreen', 'qwebgl']
 
-if utils.windows:
-    datas = [(os.path.join(utils.windows_build_data_path, 'gphoto2'), 'gphoto2')]
-elif utils.macos:
-    datas = [(os.path.join(utils.mac_build_data_path, 'gphoto2'), 'gphoto2')]
+if utils.windows or utils.macos:
+    datas = [(os.path.join(utils.build_data_path, 'gphoto2'), 'gphoto2')]
 else:
     datas = []
 
