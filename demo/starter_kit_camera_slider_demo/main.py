@@ -309,7 +309,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         else:
             self.close_in_progress = False
 
-        QMainWindow.closeEvent(self, event)
+        # Without this, the quit event seems to not reach the main loop under OSX.
+        QApplication.quit()
 
     # override QMainWindow.eventFilter
     def eventFilter(self, obj, event):
