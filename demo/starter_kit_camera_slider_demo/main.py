@@ -76,8 +76,32 @@ from starter_kit_camera_slider_demo.tinkerforge.brick_stepper import BrickSteppe
 from starter_kit_camera_slider_demo.tinkerforge.brick_silent_stepper import BrickSilentStepper
 from starter_kit_camera_slider_demo.tinkerforge.bricklet_io4 import BrickletIO4
 from starter_kit_camera_slider_demo.ui_mainwindow import Ui_MainWindow
-from starter_kit_camera_slider_demo.load_pixmap import load_pixmap
+from starter_kit_camera_slider_demo.load_pixmap import load_pixmap, get_resources_path
 import starter_kit_camera_slider_demo.config as config
+
+def load_commit_id(name):
+    try:
+        # Don't warn if the file is missing, as it is expected when run from source.
+        path = get_resources_path(name, warn_on_missing_file=False)
+
+        if path is not None:
+            with open(path, 'r') as f:
+                return f.read().strip()
+    except FileNotFoundError:
+        pass
+
+    return None
+
+INTERNAL = load_commit_id('internal')
+
+SNAPSHOT = load_commit_id('snapshot')
+
+DEMO_FULL_VERSION = config.DEMO_VERSION
+
+if INTERNAL != None:
+    DEMO_FULL_VERSION += '+internal~{}'.format(INTERNAL)
+elif SNAPSHOT != None:
+    DEMO_FULL_VERSION += '+snapshot~{}'.format(SNAPSHOT)
 
 NO_STEPPER_BRICK_FOUND = 'No Stepper Brick found'
 NO_IO4_BRICKLET_FOUND = 'No IO-4 Bricklet found'
@@ -148,7 +172,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         QMainWindow.__init__(self, parent)
 
         self.setupUi(self)
-        self.setWindowTitle('Starter Kit: Camera Slider Demo ' + config.DEMO_VERSION)
+        self.setWindowTitle('Starter Kit: Camera Slider Demo ' + DEMO_FULL_VERSION)
 
         signal.signal(signal.SIGINT, self.shutdown)
         signal.signal(signal.SIGTERM, self.shutdown)

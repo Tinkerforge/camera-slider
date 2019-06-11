@@ -1,4 +1,4 @@
-Name "Starter Kit: Camera Slider Demo <<DOT_VERSION>>"
+Name "Starter Kit: Camera Slider Demo <<VERSION>>"
 
 OutFile "starter_kit_camera_slider_demo_windows_<<UNDERSCORE_VERSION>>.exe"
 
@@ -16,7 +16,7 @@ RequestExecutionLevel admin
 
 ;--------------------------------
 
-!define DEMO_VERSION <<DOT_VERSION>>
+!define DEMO_VERSION <<VERSION>>
 
 ;--------------------------------
 
